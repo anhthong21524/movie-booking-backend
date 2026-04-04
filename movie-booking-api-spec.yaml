@@ -1,0 +1,1367 @@
+openapi: 3.1.0
+info:
+  title: Movie Booking API
+  version: 1.0.0
+  description: REST API for browsing movies, viewing showtimes, reserving seats, and managing bookings.
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: Auth
+    description: Register, login, refresh, and logout.
+  - name: Users
+    description: Current user profile.
+  - name: Movies
+    description: Browse and search the public movie catalogue.
+  - name: Admin Movies
+    description: Create, update, and delete movies (ADMIN only).
+  - name: Showtimes
+    description: List showtimes and check seat availability.
+  - name: Admin Showtimes
+    description: Create, update, and delete showtimes (ADMIN only).
+  - name: Bookings
+    description: Create and cancel bookings, and view booking history.
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+                  description: Plain-text password; hashed server-side before persistence.
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken, refreshToken, tokenType, expiresIn, user]
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  tokenType:
+                    type: string
+                    examples:
+                      - Bearer
+                  expiresIn:
+                    type: integer
+                    format: int32
+                    description: Access token lifetime in seconds.
+                  user:
+                    type: object
+                    required: [id, email, role, createdAt]
+                    properties:
+                      id:
+                        type: integer
+                        format: int64
+                      email:
+                        type: string
+                        format: email
+                      role:
+                        $ref: '#/components/schemas/UserRole'
+                      createdAt:
+                        type: string
+                        format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/EmailConflict'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate with email and password
+      operationId: loginUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken, refreshToken, tokenType, expiresIn, user]
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  tokenType:
+                    type: string
+                    examples:
+                      - Bearer
+                  expiresIn:
+                    type: integer
+                    format: int32
+                    description: Access token lifetime in seconds.
+                  user:
+                    type: object
+                    required: [id, email, role, createdAt]
+                    properties:
+                      id:
+                        type: integer
+                        format: int64
+                      email:
+                        type: string
+                        format: email
+                      role:
+                        $ref: '#/components/schemas/UserRole'
+                      createdAt:
+                        type: string
+                        format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken, refreshToken, tokenType, expiresIn, user]
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  tokenType:
+                    type: string
+                    examples:
+                      - Bearer
+                  expiresIn:
+                    type: integer
+                    format: int32
+                    description: Access token lifetime in seconds.
+                  user:
+                    type: object
+                    required: [id, email, role, createdAt]
+                    properties:
+                      id:
+                        type: integer
+                        format: int64
+                      email:
+                        type: string
+                        format: email
+                      role:
+                        $ref: '#/components/schemas/UserRole'
+                      createdAt:
+                        type: string
+                        format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Invalidate current access token
+      operationId: logoutUser
+      responses:
+        '204':
+          description: Logged out successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      operationId: getMyProfile
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, email, role, createdAt]
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  email:
+                    type: string
+                    format: email
+                  role:
+                    $ref: '#/components/schemas/UserRole'
+                  createdAt:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /movies:
+    get:
+      tags: [Movies]
+      summary: List movies
+      operationId: listMovies
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          required: false
+          description: Filter by movie status.
+          schema:
+            $ref: '#/components/schemas/MovieStatus'
+        - name: keyword
+          in: query
+          required: false
+          description: Case-insensitive partial match on title.
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Paginated movie list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, size, totalItems, totalPages]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, title, durationMinutes, status, createdAt, updatedAt]
+                      properties:
+                        id:
+                          type: integer
+                          format: int64
+                        title:
+                          type: string
+                        durationMinutes:
+                          type: integer
+                        posterUrl:
+                          type: string
+                          format: uri
+                        status:
+                          $ref: '#/components/schemas/MovieStatus'
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                  page:
+                    type: integer
+                    minimum: 0
+                  size:
+                    type: integer
+                    minimum: 1
+                  totalItems:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  totalPages:
+                    type: integer
+                    minimum: 0
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /movies/{movieId}:
+    get:
+      tags: [Movies]
+      summary: Get movie by ID
+      operationId: getMovieById
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/MovieIdPath'
+      responses:
+        '200':
+          description: Movie detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, title, durationMinutes, status, createdAt, updatedAt]
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  durationMinutes:
+                    type: integer
+                  posterUrl:
+                    type: string
+                    format: uri
+                  status:
+                    $ref: '#/components/schemas/MovieStatus'
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '404':
+          $ref: '#/components/responses/MovieNotFound'
+
+  /admin/movies:
+    post:
+      tags: [Admin Movies]
+      summary: Create a movie
+      operationId: createMovie
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, durationMinutes, status]
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 2000
+                durationMinutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 600
+                posterUrl:
+                  type: string
+                  format: uri
+                  maxLength: 1000
+                status:
+                  $ref: '#/components/schemas/MovieStatus'
+      responses:
+        '201':
+          description: Movie created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, title, durationMinutes, status, createdAt, updatedAt]
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  durationMinutes:
+                    type: integer
+                  posterUrl:
+                    type: string
+                    format: uri
+                  status:
+                    $ref: '#/components/schemas/MovieStatus'
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/movies/{movieId}:
+    put:
+      tags: [Admin Movies]
+      summary: Update a movie
+      operationId: updateMovie
+      parameters:
+        - $ref: '#/components/parameters/MovieIdPath'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, durationMinutes, status]
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 2000
+                durationMinutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 600
+                posterUrl:
+                  type: string
+                  format: uri
+                  maxLength: 1000
+                status:
+                  $ref: '#/components/schemas/MovieStatus'
+      responses:
+        '200':
+          description: Movie updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, title, durationMinutes, status, createdAt, updatedAt]
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  durationMinutes:
+                    type: integer
+                  posterUrl:
+                    type: string
+                    format: uri
+                  status:
+                    $ref: '#/components/schemas/MovieStatus'
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/MovieNotFound'
+
+    delete:
+      tags: [Admin Movies]
+      summary: Delete a movie
+      operationId: deleteMovie
+      parameters:
+        - $ref: '#/components/parameters/MovieIdPath'
+      responses:
+        '204':
+          description: Movie deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/MovieNotFound'
+
+  /showtimes:
+    get:
+      tags: [Showtimes]
+      summary: List showtimes for a movie
+      operationId: listShowtimes
+      security: []
+      parameters:
+        - name: movieId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: fromTime
+          in: query
+          required: false
+          description: Include showtimes starting at or after this UTC timestamp (e.g. 2026-04-05T10:00:00Z).
+          schema:
+            type: string
+            format: date-time
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+        - name: toTime
+          in: query
+          required: false
+          description: Include showtimes starting at or before this UTC timestamp.
+          schema:
+            type: string
+            format: date-time
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+      responses:
+        '200':
+          description: Showtime list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, movieId, room, startTime, endTime, totalSeats, availableSeats, createdAt, updatedAt]
+                      properties:
+                        id:
+                          type: integer
+                          format: int64
+                        movieId:
+                          type: integer
+                          format: int64
+                        room:
+                          type: string
+                        startTime:
+                          type: string
+                          format: date-time
+                        endTime:
+                          type: string
+                          format: date-time
+                        totalSeats:
+                          type: integer
+                        availableSeats:
+                          type: integer
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/MovieNotFound'
+
+  /showtimes/{showtimeId}/seats:
+    get:
+      tags: [Showtimes]
+      summary: Get seat availability for a showtime
+      operationId: listShowtimeSeats
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ShowtimeIdPath'
+      responses:
+        '200':
+          description: Seat availability list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [showtimeId, totalSeats, availableSeats, seats]
+                properties:
+                  showtimeId:
+                    type: integer
+                    format: int64
+                  totalSeats:
+                    type: integer
+                  availableSeats:
+                    type: integer
+                  seats:
+                    type: array
+                    items:
+                      type: object
+                      required: [seatNumber, status]
+                      properties:
+                        seatNumber:
+                          type: string
+                          examples:
+                            - A1
+                        status:
+                          $ref: '#/components/schemas/SeatStatus'
+        '404':
+          $ref: '#/components/responses/ShowtimeNotFound'
+
+  /admin/showtimes:
+    get:
+      tags: [Admin Showtimes]
+      summary: List all showtimes
+      operationId: adminListShowtimes
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: movieId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: fromTime
+          in: query
+          required: false
+          description: Include showtimes starting at or after this UTC timestamp.
+          schema:
+            type: string
+            format: date-time
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+        - name: toTime
+          in: query
+          required: false
+          description: Include showtimes starting at or before this UTC timestamp.
+          schema:
+            type: string
+            format: date-time
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+      responses:
+        '200':
+          description: Paginated showtime list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, size, totalItems, totalPages]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, movieId, room, startTime, endTime, totalSeats, availableSeats, createdAt, updatedAt]
+                      properties:
+                        id:
+                          type: integer
+                          format: int64
+                        movieId:
+                          type: integer
+                          format: int64
+                        room:
+                          type: string
+                        startTime:
+                          type: string
+                          format: date-time
+                        endTime:
+                          type: string
+                          format: date-time
+                        totalSeats:
+                          type: integer
+                        availableSeats:
+                          type: integer
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                  page:
+                    type: integer
+                    minimum: 0
+                  size:
+                    type: integer
+                    minimum: 1
+                  totalItems:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  totalPages:
+                    type: integer
+                    minimum: 0
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Admin Showtimes]
+      summary: Create a showtime
+      operationId: createShowtime
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [movieId, room, startTime, endTime, totalSeats]
+              properties:
+                movieId:
+                  type: integer
+                  format: int64
+                  minimum: 1
+                room:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  pattern: '^[A-Z0-9][A-Z0-9_-]*$'
+                  description: Room identifier (e.g. ROOM_A, HALL_1). Uppercase letters, digits, underscores, and hyphens only.
+                  examples:
+                    - ROOM_A
+                startTime:
+                  type: string
+                  format: date-time
+                  pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+                  description: UTC start time (e.g. 2026-04-05T10:00:00Z).
+                endTime:
+                  type: string
+                  format: date-time
+                  pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+                  description: UTC end time. Must be after startTime.
+                totalSeats:
+                  type: integer
+                  minimum: 1
+                  maximum: 500
+      responses:
+        '201':
+          description: Showtime created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, movieId, room, startTime, endTime, totalSeats, availableSeats, createdAt, updatedAt]
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  movieId:
+                    type: integer
+                    format: int64
+                  room:
+                    type: string
+                  startTime:
+                    type: string
+                    format: date-time
+                  endTime:
+                    type: string
+                    format: date-time
+                  totalSeats:
+                    type: integer
+                  availableSeats:
+                    type: integer
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/MovieNotFound'
+        '409':
+          $ref: '#/components/responses/ShowtimeOverlap'
+
+  /admin/showtimes/{showtimeId}:
+    put:
+      tags: [Admin Showtimes]
+      summary: Update a showtime
+      operationId: updateShowtime
+      parameters:
+        - $ref: '#/components/parameters/ShowtimeIdPath'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [room, startTime, endTime, totalSeats]
+              properties:
+                room:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  pattern: '^[A-Z0-9][A-Z0-9_-]*$'
+                  description: Room identifier (e.g. ROOM_A, HALL_1). Uppercase letters, digits, underscores, and hyphens only.
+                  examples:
+                    - ROOM_A
+                startTime:
+                  type: string
+                  format: date-time
+                  pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+                  description: UTC start time.
+                endTime:
+                  type: string
+                  format: date-time
+                  pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
+                  description: UTC end time. Must be after startTime.
+                totalSeats:
+                  type: integer
+                  minimum: 1
+                  maximum: 500
+      responses:
+        '200':
+          description: Showtime updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, movieId, room, startTime, endTime, totalSeats, availableSeats, createdAt, updatedAt]
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  movieId:
+                    type: integer
+                    format: int64
+                  room:
+                    type: string
+                  startTime:
+                    type: string
+                    format: date-time
+                  endTime:
+                    type: string
+                    format: date-time
+                  totalSeats:
+                    type: integer
+                  availableSeats:
+                    type: integer
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ShowtimeNotFound'
+        '409':
+          $ref: '#/components/responses/ShowtimeOverlap'
+
+    delete:
+      tags: [Admin Showtimes]
+      summary: Delete a showtime
+      operationId: deleteShowtime
+      parameters:
+        - $ref: '#/components/parameters/ShowtimeIdPath'
+      responses:
+        '204':
+          description: Showtime deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ShowtimeNotFound'
+
+  /bookings:
+    post:
+      tags: [Bookings]
+      summary: Create a booking
+      operationId: createBooking
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [showtimeId, seatNumbers]
+              properties:
+                showtimeId:
+                  type: integer
+                  format: int64
+                  minimum: 1
+                seatNumbers:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  uniqueItems: true
+                  items:
+                    type: string
+                    minLength: 2
+                    maxLength: 10
+                    pattern: '^[A-Z][0-9]{1,2}$'
+                    examples:
+                      - A1
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [bookingId, userId, showtimeId, seatNumbers, status, createdAt, updatedAt]
+                properties:
+                  bookingId:
+                    type: integer
+                    format: int64
+                  userId:
+                    type: integer
+                    format: int64
+                  showtimeId:
+                    type: integer
+                    format: int64
+                  seatNumbers:
+                    type: array
+                    items:
+                      type: string
+                  status:
+                    $ref: '#/components/schemas/BookingStatus'
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ShowtimeNotFound'
+        '409':
+          $ref: '#/components/responses/SeatConflict'
+
+  /bookings/{bookingId}:
+    patch:
+      tags: [Bookings]
+      summary: Cancel a booking
+      operationId: cancelBooking
+      parameters:
+        - $ref: '#/components/parameters/BookingIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              description: Only CANCELLED is accepted. Status cannot be set back to CONFIRMED via this endpoint.
+              properties:
+                status:
+                  type: string
+                  enum: [CANCELLED]
+      responses:
+        '200':
+          description: Booking cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [bookingId, userId, showtimeId, seatNumbers, status, createdAt, updatedAt]
+                properties:
+                  bookingId:
+                    type: integer
+                    format: int64
+                  userId:
+                    type: integer
+                    format: int64
+                  showtimeId:
+                    type: integer
+                    format: int64
+                  seatNumbers:
+                    type: array
+                    items:
+                      type: string
+                  status:
+                    $ref: '#/components/schemas/BookingStatus'
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/BookingNotFound'
+        '409':
+          $ref: '#/components/responses/BookingAlreadyCancelled'
+
+  /users/me/bookings:
+    get:
+      tags: [Bookings]
+      summary: List my bookings
+      operationId: listMyBookings
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          required: false
+          description: Filter by booking status.
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+      responses:
+        '200':
+          description: Paginated booking list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, size, totalItems, totalPages]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [bookingId, showtimeId, seatNumbers, status, createdAt, updatedAt]
+                      properties:
+                        bookingId:
+                          type: integer
+                          format: int64
+                        showtimeId:
+                          type: integer
+                          format: int64
+                        seatNumbers:
+                          type: array
+                          items:
+                            type: string
+                        status:
+                          $ref: '#/components/schemas/BookingStatus'
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                  page:
+                    type: integer
+                    minimum: 0
+                  size:
+                    type: integer
+                    minimum: 1
+                  totalItems:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  totalPages:
+                    type: integer
+                    minimum: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+
+    MovieIdPath:
+      name: movieId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+    ShowtimeIdPath:
+      name: showtimeId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+    BookingIdPath:
+      name: bookingId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Zero-based page index.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      description: Number of items per page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      description: |
+        Sort order as `field:direction`. Direction must be `asc` or `desc`.
+        Example: `createdAt:desc`.
+      schema:
+        type: string
+        pattern: '^[a-zA-Z]+:(asc|desc)$'
+        examples:
+          - createdAt:desc
+
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |
+        Client-generated key for safe retries. Repeated requests with the same
+        key return the original response without creating a duplicate resource.
+      schema:
+        type: string
+        maxLength: 100
+
+  responses:
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          examples:
+            default:
+              value:
+                code: VALIDATION_ERROR
+                detail: Request validation failed.
+                errors:
+                  - field: email
+                    message: must be a well-formed email address
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          examples:
+            default:
+              value:
+                code: UNAUTHORIZED
+                detail: Authentication is required.
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          examples:
+            default:
+              value:
+                code: FORBIDDEN
+                detail: You do not have permission to access this resource.
+
+    EmailConflict:
+      description: Email is already registered
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          examples:
+            default:
+              value:
+                code: EMAIL_ALREADY_EXISTS
+                detail: The email address is already registered.
+                errors:
+                  - field: email
+                    message: already registered
+
+    MovieNotFound:
+      description: Movie not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          examples:
+            default:
+              value:
+                code: MOVIE_NOT_FOUND
+                detail: No movie found with the given ID.
+
+    ShowtimeNotFound:
+      description: Showtime not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          examples:
+            default:
+              value:
+                code: SHOWTIME_NOT_FOUND
+                detail: No showtime found with the given ID.
+
+    BookingNotFound:
+      description: Booking not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          examples:
+            default:
+              value:
+                code: BOOKING_NOT_FOUND
+                detail: No booking found with the given ID.
+
+    ShowtimeOverlap:
+      description: Showtime overlaps an existing showtime in the same room
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          examples:
+            default:
+              value:
+                code: SHOWTIME_OVERLAP
+                detail: The requested time slot overlaps an existing showtime in room ROOM_A.
+                errors:
+                  - field: room
+                    message: overlapping schedule
+
+    SeatConflict:
+      description: One or more seats are already reserved
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          examples:
+            default:
+              value:
+                code: SEAT_ALREADY_RESERVED
+                detail: One or more selected seats are already reserved.
+                errors:
+                  - field: seatNumbers
+                    message: already reserved
+
+    BookingAlreadyCancelled:
+      description: Booking is already cancelled
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          examples:
+            default:
+              value:
+                code: BOOKING_ALREADY_CANCELLED
+                detail: This booking has already been cancelled.
+
+  schemas:
+
+    # ── Errors ────────────────────────────────────────────────────────────────
+
+    ProblemDetail:
+      type: object
+      required: [code, detail]
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+          examples:
+            - VALIDATION_ERROR
+        detail:
+          type: string
+          description: Human-readable explanation of this occurrence.
+          examples:
+            - Request validation failed.
+        errors:
+          type: array
+          description: Field-level errors. Present on 400 responses only.
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field:
+                type: string
+                examples:
+                  - email
+              message:
+                type: string
+                examples:
+                  - must be a well-formed email address
+
+    # ── Enums ─────────────────────────────────────────────────────────────────
+
+    UserRole:
+      type: string
+      enum: [USER, ADMIN]
+
+    MovieStatus:
+      type: string
+      enum: [NOW_SHOWING, COMING_SOON, ARCHIVED]
+
+    BookingStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, CANCELLED]
+
+    SeatStatus:
+      type: string
+      enum: [AVAILABLE, HELD, BOOKED]
