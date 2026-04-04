@@ -41,5 +41,8 @@ nb-configuration.xml
 # TLS Certificates
 .certs/
 
+# JWT keys — dev keys in META-INF/resources/ ARE committed intentionally.
+# For production, supply keys via environment variables.
+
 # Claude Code
 .claude/settings.local.json
