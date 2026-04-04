@@ -1,90 +1,122 @@
-# movie-booking-api
+# Movie Booking API
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+REST API for browsing movies, viewing showtimes, reserving seats, and managing bookings.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+Built with **Quarkus 3.x**, **Java 21**, **Gradle**, **PostgreSQL**, and **Liquibase**.
 
-## Running the application in dev mode
+---
 
-You can run your application in dev mode that enables live coding using:
+## Tech stack
 
-```shell script
-./mvnw quarkus:dev
+| Layer | Technology |
+|---|---|
+| Runtime | Java 21 |
+| Framework | Quarkus 3.34.2 |
+| Build | Gradle |
+| Database | PostgreSQL 16 |
+| Migrations | Liquibase |
+| Auth | JWT (RS256) via SmallRye JWT |
+| Validation | Hibernate Validator |
+| Docs | OpenAPI 3.1 / Swagger UI |
+| Deploy | Render (Docker / JVM) |
+
+---
+
+## Getting started
+
+### Prerequisites
+
+- Java 21
+- Docker + Docker Compose
+
+### 1. Configure environment
+
+```bash
+cp .env.example .env
+# Edit .env if needed (defaults work with docker-compose)
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+### 2. Start the database
 
-## Packaging and running the application
-
-The application can be packaged using:
-
-```shell script
-./mvnw package
+```bash
+docker compose up postgres -d
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+### 3. Run in dev mode
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
-
-If you want to build an _über-jar_, execute the following command:
-
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
+```bash
+./gradlew quarkusDev
 ```
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+The app starts at `http://localhost:8080`. Liquibase migrations run automatically on startup.
 
-## Creating a native executable
+---
 
-You can create a native executable using:
+## Useful endpoints
 
-```shell script
-./mvnw package -Dnative
+| Endpoint | Description |
+|---|---|
+| `GET /q/health` | Health check |
+| `GET /swagger-ui` | Swagger UI |
+| `GET /q/openapi` | Raw OpenAPI spec |
+
+Full API contract: [`movie-booking-api-spec.yaml`](./movie-booking-api-spec.yaml)
+
+---
+
+## API overview
+
+| Tag | Endpoints |
+|---|---|
+| Auth | `POST /api/v1/auth/register`, `/login`, `/refresh`, `/logout` |
+| Users | `GET /api/v1/users/me` |
+| Movies | `GET /api/v1/movies`, `GET /api/v1/movies/{id}` |
+| Admin Movies | `POST/PUT/DELETE /api/v1/admin/movies` |
+| Showtimes | `GET /api/v1/showtimes`, `GET /api/v1/showtimes/{id}/seats` |
+| Admin Showtimes | `GET/POST/PUT/DELETE /api/v1/admin/showtimes` |
+| Bookings | `POST /api/v1/bookings`, `PATCH /api/v1/bookings/{id}`, `GET /api/v1/users/me/bookings` |
+
+---
+
+## Build & run
+
+```bash
+# Build (produces build/quarkus-app/)
+./gradlew build
+
+# Run the built JAR
+java -jar build/quarkus-app/quarkus-run.jar
+
+# Run tests
+./gradlew test
+
+# Full stack with Docker
+docker compose up --build
 ```
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+---
 
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
+## Project structure
+
+```
+src/main/java/com/moviebooking/
+  auth/          # Register, login, refresh, logout
+  user/          # Current user profile
+  movie/         # Movie catalogue + admin CRUD
+  showtime/      # Showtime listing + admin CRUD
+  booking/       # Booking creation, cancellation, history
+  common/        # Exception handling, shared response types
+
+src/main/resources/
+  application.properties
+  META-INF/resources/   # Dev JWT key pair
+  db/changelog/         # Liquibase migrations
 ```
 
-You can then execute your native executable with: `./target/movie-booking-api-1.0.0-SNAPSHOT-runner`
+---
 
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+## Documentation
 
-## Related Guides
-
-- Hibernate Validator ([guide](https://quarkus.io/guides/validation)): Validate object properties (field, getter) and method parameters for your beans (REST, CDI, Jakarta Persistence)
-- SmallRye OpenAPI ([guide](https://quarkus.io/guides/openapi-swaggerui)): Document your REST APIs with OpenAPI - comes with Swagger UI
-- REST Jackson ([guide](https://quarkus.io/guides/rest#json-serialisation)): Jackson serialization support for Quarkus REST. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it
-- Hibernate ORM with Panache ([guide](https://quarkus.io/guides/hibernate-orm-panache)): Simplify your persistence code for Hibernate ORM via the active record or the repository pattern
-- Liquibase ([guide](https://quarkus.io/guides/liquibase)): Handle your database schema migrations with Liquibase
-- SmallRye JWT ([guide](https://quarkus.io/guides/security-jwt)): Secure your applications with JSON Web Token
-- SmallRye Health ([guide](https://quarkus.io/guides/smallrye-health)): Monitor service health
-- SmallRye JWT Build ([guide](https://quarkus.io/guides/security-jwt-build)): Create JSON Web Token with SmallRye JWT Build API
-- JDBC Driver - PostgreSQL ([guide](https://quarkus.io/guides/datasource)): Connect to the PostgreSQL database via JDBC
-
-## Provided Code
-
-### Hibernate ORM
-
-Create your first JPA entity
-
-[Related guide section...](https://quarkus.io/guides/hibernate-orm)
-
-
-[Related Hibernate with Panache section...](https://quarkus.io/guides/hibernate-orm-panache)
-
-
-### REST
-
-Easily start your REST Web Services
-
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
-
-### SmallRye Health
-
-Monitor your application's health using SmallRye Health
-
-[Related guide section...](https://quarkus.io/guides/smallrye-health)
+- [`CLAUDE.md`](./CLAUDE.md) — architecture rules, data model, error codes, test strategy
+- [`docs/decisions.md`](./docs/decisions.md) — rationale for non-obvious design decisions
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — branch strategy and PR workflow
