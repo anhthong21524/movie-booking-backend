@@ -1,0 +1,51 @@
+databaseChangeLog:
+  - changeSet:
+      id: V3-1-unique-booking-seats
+      author: system
+      changes:
+        - addUniqueConstraint:
+            tableName: booking_seats
+            columnNames: showtime_id, seat_number
+            constraintName: uq_booking_seats_showtime_seat
+
+  - changeSet:
+      id: V3-2-unique-booking-idempotency
+      author: system
+      changes:
+        - addUniqueConstraint:
+            tableName: bookings
+            columnNames: idempotency_key
+            constraintName: uq_bookings_idempotency_key
+
+  - changeSet:
+      id: V3-3-index-showtimes-movie
+      author: system
+      changes:
+        - createIndex:
+            tableName: showtimes
+            indexName: idx_showtimes_movie_id
+            columns:
+              - column:
+                  name: movie_id
+
+  - changeSet:
+      id: V3-4-index-bookings-user
+      author: system
+      changes:
+        - createIndex:
+            tableName: bookings
+            indexName: idx_bookings_user_id
+            columns:
+              - column:
+                  name: user_id
+
+  - changeSet:
+      id: V3-5-index-bookings-showtime
+      author: system
+      changes:
+        - createIndex:
+            tableName: bookings
+            indexName: idx_bookings_showtime_id
+            columns:
+              - column:
+                  name: showtime_id

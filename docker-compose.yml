@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: movie-booking-db
+    environment:
+      POSTGRES_DB: movie_booking
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    container_name: movie-booking-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/movie_booking
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_ISSUER: movie-booking-api
+      JWT_ACCESS_EXPIRY: 900
+      JWT_REFRESH_EXPIRY: 604800
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:

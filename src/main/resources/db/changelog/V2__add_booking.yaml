@@ -1,0 +1,83 @@
+databaseChangeLog:
+  - changeSet:
+      id: V2-1-create-bookings
+      author: system
+      changes:
+        - createTable:
+            tableName: bookings
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_bookings_user
+                    references: users(id)
+              - column:
+                  name: showtime_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_bookings_showtime
+                    references: showtimes(id)
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: idempotency_key
+                  type: VARCHAR(100)
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: V2-2-create-booking-seats
+      author: system
+      changes:
+        - createTable:
+            tableName: booking_seats
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: booking_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_booking_seats_booking
+                    references: bookings(id)
+              - column:
+                  name: showtime_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_booking_seats_showtime
+                    references: showtimes(id)
+              - column:
+                  name: seat_number
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false

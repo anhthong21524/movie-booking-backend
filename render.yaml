@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: movie-booking-api
+    runtime: docker
+    dockerfilePath: ./src/main/docker/Dockerfile.jvm
+    envVars:
+      - key: DB_URL
+        fromDatabase:
+          name: movie-booking-db
+          property: connectionString
+      - key: DB_USERNAME
+        fromDatabase:
+          name: movie-booking-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: movie-booking-db
+          property: password
+      - key: JWT_ISSUER
+        value: movie-booking-api
+      - key: JWT_ACCESS_EXPIRY
+        value: 900
+      - key: JWT_REFRESH_EXPIRY
+        value: 604800
+
+databases:
+  - name: movie-booking-db
+    databaseName: movie_booking
+    plan: free

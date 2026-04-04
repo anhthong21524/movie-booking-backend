@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/V1__init_schema.yaml
+  - include:
+      file: db/changelog/V2__add_booking.yaml
+  - include:
+      file: db/changelog/V3__constraints.yaml
