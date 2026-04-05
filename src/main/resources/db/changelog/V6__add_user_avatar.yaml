@@ -1,0 +1,14 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: V6-1-users-add-avatar
+      author: system
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: avatar
+                  type: TEXT
+                  constraints:
+                    nullable: true

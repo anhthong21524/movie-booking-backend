@@ -2,11 +2,16 @@ package com.moviebooking.user.resource;
 
 import com.moviebooking.booking.entity.BookingStatus;
 import com.moviebooking.booking.service.BookingService;
+import com.moviebooking.user.dto.AvatarUpdateRequest;
 import com.moviebooking.user.service.UserService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
@@ -16,6 +21,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 
 @Path("/users")
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class UserResource {
 
     @Inject
@@ -33,6 +39,22 @@ public class UserResource {
     public Response getMyProfile() {
         Long userId = Long.parseLong(jwt.getSubject());
         return Response.ok(userService.findById(userId)).build();
+    }
+
+    @PUT
+    @Path("/me/avatar")
+    @RolesAllowed({"USER", "ADMIN"})
+    public Response updateAvatar(@Valid AvatarUpdateRequest request) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        return Response.ok(userService.updateAvatar(userId, request.getAvatar())).build();
+    }
+
+    @DELETE
+    @Path("/me/avatar")
+    @RolesAllowed({"USER", "ADMIN"})
+    public Response removeAvatar() {
+        Long userId = Long.parseLong(jwt.getSubject());
+        return Response.ok(userService.removeAvatar(userId)).build();
     }
 
     @GET

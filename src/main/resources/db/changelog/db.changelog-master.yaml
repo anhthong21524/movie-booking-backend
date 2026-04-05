@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/V4__update_schema.yaml
   - include:
       file: db/changelog/V5__seed_data.yaml
+  - include:
+      file: db/changelog/V6__add_user_avatar.yaml

@@ -33,6 +33,9 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "avatar", columnDefinition = "TEXT")
+    private String avatar;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {
@@ -78,5 +81,13 @@ public class User {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
     }
 }
