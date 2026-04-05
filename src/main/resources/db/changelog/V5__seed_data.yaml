@@ -1,0 +1,321 @@
+databaseChangeLog:
+
+  # ── pgcrypto (required for bcrypt password hashing) ──────────────────────────
+
+  - changeSet:
+      id: V5-0-enable-pgcrypto
+      author: system
+      dbms: postgresql
+      changes:
+        - sql:
+            sql: CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+  # ── cinemas ───────────────────────────────────────────────────────────────────
+
+  - changeSet:
+      id: V5-1-insert-cinemas
+      author: system
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO cinemas (name) VALUES
+                ('CGV Vincom'),
+                ('CGV Landmark'),
+                ('Lotte Cinema');
+
+  # ── rooms ─────────────────────────────────────────────────────────────────────
+
+  - changeSet:
+      id: V5-2-insert-rooms
+      author: system
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO rooms (cinema_id, name, capacity)
+              VALUES
+                ((SELECT id FROM cinemas WHERE name = 'CGV Vincom'),    'Auditorium A',    60),
+                ((SELECT id FROM cinemas WHERE name = 'CGV Vincom'),    'Premium Hall',    60),
+                ((SELECT id FROM cinemas WHERE name = 'CGV Vincom'),    'Screening Room 1',60),
+                ((SELECT id FROM cinemas WHERE name = 'CGV Landmark'),  'Auditorium B',    60),
+                ((SELECT id FROM cinemas WHERE name = 'CGV Landmark'),  'IMAX Hall',       60),
+                ((SELECT id FROM cinemas WHERE name = 'CGV Landmark'),  'Auditorium C',    60),
+                ((SELECT id FROM cinemas WHERE name = 'Lotte Cinema'),  'Hall 1',          60),
+                ((SELECT id FROM cinemas WHERE name = 'Lotte Cinema'),  'Hall 2',          60),
+                ((SELECT id FROM cinemas WHERE name = 'Lotte Cinema'),  'VIP Room',        60);
+
+  # ── users ─────────────────────────────────────────────────────────────────────
+  # Passwords: user@moviehub.test → user1234 | admin@moviehub.test → admin1234
+
+  - changeSet:
+      id: V5-3-insert-users
+      author: system
+      dbms: postgresql
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO users (name, email, password, role) VALUES
+                ('Demo User',  'user@moviehub.test',  crypt('user1234',  gen_salt('bf', 10)), 'USER'),
+                ('Admin User', 'admin@moviehub.test', crypt('admin1234', gen_salt('bf', 10)), 'ADMIN');
+
+  # ── movies ────────────────────────────────────────────────────────────────────
+
+  - changeSet:
+      id: V5-4-insert-movies
+      author: system
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO movies (title, description, duration_minutes, genre, rating, release_date, base_price, status, created_at, updated_at)
+              VALUES
+                (
+                  'The Last Projection',
+                  'A brilliant physicist discovers a flaw in the universe''s rendering engine and must decide whether to expose the truth or protect humanity from an existential crisis.',
+                  95,
+                  'Sci-Fi Thriller',
+                  'PG-13',
+                  '2026-03-14',
+                  10.00,
+                  'NOW_SHOWING',
+                  NOW(), NOW()
+                ),
+                (
+                  'Midnight Harbor',
+                  'A retired detective and a lighthouse keeper piece together the truth behind a series of unexplained disappearances along a fog-swept coastline.',
+                  111,
+                  'Mystery',
+                  'PG',
+                  '2026-02-28',
+                  11.00,
+                  'NOW_SHOWING',
+                  NOW(), NOW()
+                ),
+                (
+                  'Paper Satellites',
+                  'Two pen pals separated by circumstance reconnect as adults and navigate rediscovering each other across the distance that has quietly grown between them.',
+                  118,
+                  'Drama',
+                  'G',
+                  '2026-01-09',
+                  12.50,
+                  'NOW_SHOWING',
+                  NOW(), NOW()
+                );
+
+  # ── showtimes ─────────────────────────────────────────────────────────────────
+  # 6 showtimes across 3 movies.
+  # end_time = start_time + movie duration_minutes.
+  # total_seats = 60 (6 rows × 10 seats), available_seats set after seat inserts.
+
+  - changeSet:
+      id: V5-5-insert-showtimes
+      author: system
+      changes:
+        - sql:
+            sql: |
+              -- ST-1: The Last Projection · Auditorium A · 2026-04-05 18:30 UTC
+              INSERT INTO showtimes (movie_id, cinema_id, room_id, room, start_time, end_time, total_seats, available_seats, price, created_at, updated_at)
+              SELECT
+                (SELECT id FROM movies  WHERE title = 'The Last Projection'),
+                (SELECT id FROM cinemas WHERE name  = 'CGV Vincom'),
+                (SELECT r.id FROM rooms r JOIN cinemas c ON r.cinema_id = c.id WHERE c.name = 'CGV Vincom'   AND r.name = 'Auditorium A'),
+                'Auditorium A',
+                '2026-04-05 18:30:00+00'::TIMESTAMPTZ,
+                '2026-04-05 20:05:00+00'::TIMESTAMPTZ,
+                60, 60, 10.00, NOW(), NOW();
+
+              -- ST-2: The Last Projection · Premium Hall · 2026-04-05 21:00 UTC (sold out)
+              INSERT INTO showtimes (movie_id, cinema_id, room_id, room, start_time, end_time, total_seats, available_seats, price, created_at, updated_at)
+              SELECT
+                (SELECT id FROM movies  WHERE title = 'The Last Projection'),
+                (SELECT id FROM cinemas WHERE name  = 'CGV Vincom'),
+                (SELECT r.id FROM rooms r JOIN cinemas c ON r.cinema_id = c.id WHERE c.name = 'CGV Vincom'   AND r.name = 'Premium Hall'),
+                'Premium Hall',
+                '2026-04-05 21:00:00+00'::TIMESTAMPTZ,
+                '2026-04-05 22:35:00+00'::TIMESTAMPTZ,
+                60, 60, 12.50, NOW(), NOW();
+
+              -- ST-3: The Last Projection · IMAX Hall · 2026-04-06 14:00 UTC
+              INSERT INTO showtimes (movie_id, cinema_id, room_id, room, start_time, end_time, total_seats, available_seats, price, created_at, updated_at)
+              SELECT
+                (SELECT id FROM movies  WHERE title = 'The Last Projection'),
+                (SELECT id FROM cinemas WHERE name  = 'CGV Landmark'),
+                (SELECT r.id FROM rooms r JOIN cinemas c ON r.cinema_id = c.id WHERE c.name = 'CGV Landmark' AND r.name = 'IMAX Hall'),
+                'IMAX Hall',
+                '2026-04-06 14:00:00+00'::TIMESTAMPTZ,
+                '2026-04-06 15:35:00+00'::TIMESTAMPTZ,
+                60, 60, 15.50, NOW(), NOW();
+
+              -- ST-4: Midnight Harbor · Auditorium B · 2026-04-05 19:00 UTC
+              INSERT INTO showtimes (movie_id, cinema_id, room_id, room, start_time, end_time, total_seats, available_seats, price, created_at, updated_at)
+              SELECT
+                (SELECT id FROM movies  WHERE title = 'Midnight Harbor'),
+                (SELECT id FROM cinemas WHERE name  = 'CGV Landmark'),
+                (SELECT r.id FROM rooms r JOIN cinemas c ON r.cinema_id = c.id WHERE c.name = 'CGV Landmark' AND r.name = 'Auditorium B'),
+                'Auditorium B',
+                '2026-04-05 19:00:00+00'::TIMESTAMPTZ,
+                '2026-04-05 20:51:00+00'::TIMESTAMPTZ,
+                60, 60, 11.00, NOW(), NOW();
+
+              -- ST-5: Midnight Harbor · Auditorium A · 2026-04-06 16:30 UTC
+              INSERT INTO showtimes (movie_id, cinema_id, room_id, room, start_time, end_time, total_seats, available_seats, price, created_at, updated_at)
+              SELECT
+                (SELECT id FROM movies  WHERE title = 'Midnight Harbor'),
+                (SELECT id FROM cinemas WHERE name  = 'CGV Vincom'),
+                (SELECT r.id FROM rooms r JOIN cinemas c ON r.cinema_id = c.id WHERE c.name = 'CGV Vincom'   AND r.name = 'Auditorium A'),
+                'Auditorium A',
+                '2026-04-06 16:30:00+00'::TIMESTAMPTZ,
+                '2026-04-06 18:21:00+00'::TIMESTAMPTZ,
+                60, 60, 10.00, NOW(), NOW();
+
+              -- ST-6: Paper Satellites · Hall 2 · 2026-04-07 20:00 UTC
+              INSERT INTO showtimes (movie_id, cinema_id, room_id, room, start_time, end_time, total_seats, available_seats, price, created_at, updated_at)
+              SELECT
+                (SELECT id FROM movies  WHERE title = 'Paper Satellites'),
+                (SELECT id FROM cinemas WHERE name  = 'Lotte Cinema'),
+                (SELECT r.id FROM rooms r JOIN cinemas c ON r.cinema_id = c.id WHERE c.name = 'Lotte Cinema' AND r.name = 'Hall 2'),
+                'Hall 2',
+                '2026-04-07 20:00:00+00'::TIMESTAMPTZ,
+                '2026-04-07 21:58:00+00'::TIMESTAMPTZ,
+                60, 60, 12.00, NOW(), NOW();
+
+  # ── seats ─────────────────────────────────────────────────────────────────────
+  # 6 rows (A-F) × 10 seats = 60 seats per showtime.
+  # Seat patterns per showtime:
+  #   ST-1  Auditorium A 18:30  — row A all BOOKED            →  50 available
+  #   ST-2  Premium Hall 21:00  — all BOOKED (sold out)        →   0 available
+  #   ST-3  IMAX Hall    14:00  — row A seats 1-4 BOOKED       →  56 available
+  #   ST-4  Auditorium B 19:00  — rows A-B all BOOKED          →  40 available
+  #   ST-5  Auditorium A 16:30  — rows A-E all BOOKED          →  10 available
+  #   ST-6  Hall 2       20:00  — rows A-C all BOOKED          →  30 available
+
+  - changeSet:
+      id: V5-6-insert-seats-st1
+      author: system
+      dbms: postgresql
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO seats (showtime_id, row, number, label, status)
+              SELECT
+                st.id,
+                chr(64 + r.n),
+                c.n,
+                chr(64 + r.n) || c.n::text,
+                CASE WHEN r.n = 1 THEN 'BOOKED' ELSE 'AVAILABLE' END
+              FROM showtimes st,
+                generate_series(1, 6) AS r(n),
+                generate_series(1, 10) AS c(n)
+              WHERE st.start_time = '2026-04-05 18:30:00+00'::TIMESTAMPTZ;
+
+              UPDATE showtimes SET available_seats = 50
+              WHERE start_time = '2026-04-05 18:30:00+00'::TIMESTAMPTZ;
+
+  - changeSet:
+      id: V5-7-insert-seats-st2
+      author: system
+      dbms: postgresql
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO seats (showtime_id, row, number, label, status)
+              SELECT
+                st.id,
+                chr(64 + r.n),
+                c.n,
+                chr(64 + r.n) || c.n::text,
+                'BOOKED'
+              FROM showtimes st,
+                generate_series(1, 6) AS r(n),
+                generate_series(1, 10) AS c(n)
+              WHERE st.start_time = '2026-04-05 21:00:00+00'::TIMESTAMPTZ;
+
+              UPDATE showtimes SET available_seats = 0
+              WHERE start_time = '2026-04-05 21:00:00+00'::TIMESTAMPTZ;
+
+  - changeSet:
+      id: V5-8-insert-seats-st3
+      author: system
+      dbms: postgresql
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO seats (showtime_id, row, number, label, status)
+              SELECT
+                st.id,
+                chr(64 + r.n),
+                c.n,
+                chr(64 + r.n) || c.n::text,
+                CASE WHEN r.n = 1 AND c.n <= 4 THEN 'BOOKED' ELSE 'AVAILABLE' END
+              FROM showtimes st,
+                generate_series(1, 6) AS r(n),
+                generate_series(1, 10) AS c(n)
+              WHERE st.start_time = '2026-04-06 14:00:00+00'::TIMESTAMPTZ;
+
+              UPDATE showtimes SET available_seats = 56
+              WHERE start_time = '2026-04-06 14:00:00+00'::TIMESTAMPTZ;
+
+  - changeSet:
+      id: V5-9-insert-seats-st4
+      author: system
+      dbms: postgresql
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO seats (showtime_id, row, number, label, status)
+              SELECT
+                st.id,
+                chr(64 + r.n),
+                c.n,
+                chr(64 + r.n) || c.n::text,
+                CASE WHEN r.n <= 2 THEN 'BOOKED' ELSE 'AVAILABLE' END
+              FROM showtimes st,
+                generate_series(1, 6) AS r(n),
+                generate_series(1, 10) AS c(n)
+              WHERE st.start_time = '2026-04-05 19:00:00+00'::TIMESTAMPTZ;
+
+              UPDATE showtimes SET available_seats = 40
+              WHERE start_time = '2026-04-05 19:00:00+00'::TIMESTAMPTZ;
+
+  - changeSet:
+      id: V5-10-insert-seats-st5
+      author: system
+      dbms: postgresql
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO seats (showtime_id, row, number, label, status)
+              SELECT
+                st.id,
+                chr(64 + r.n),
+                c.n,
+                chr(64 + r.n) || c.n::text,
+                CASE WHEN r.n <= 5 THEN 'BOOKED' ELSE 'AVAILABLE' END
+              FROM showtimes st,
+                generate_series(1, 6) AS r(n),
+                generate_series(1, 10) AS c(n)
+              WHERE st.start_time = '2026-04-06 16:30:00+00'::TIMESTAMPTZ;
+
+              UPDATE showtimes SET available_seats = 10
+              WHERE start_time = '2026-04-06 16:30:00+00'::TIMESTAMPTZ;
+
+  - changeSet:
+      id: V5-11-insert-seats-st6
+      author: system
+      dbms: postgresql
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO seats (showtime_id, row, number, label, status)
+              SELECT
+                st.id,
+                chr(64 + r.n),
+                c.n,
+                chr(64 + r.n) || c.n::text,
+                CASE WHEN r.n <= 3 THEN 'BOOKED' ELSE 'AVAILABLE' END
+              FROM showtimes st,
+                generate_series(1, 6) AS r(n),
+                generate_series(1, 10) AS c(n)
+              WHERE st.start_time = '2026-04-07 20:00:00+00'::TIMESTAMPTZ;
+
+              UPDATE showtimes SET available_seats = 30
+              WHERE start_time = '2026-04-07 20:00:00+00'::TIMESTAMPTZ;
