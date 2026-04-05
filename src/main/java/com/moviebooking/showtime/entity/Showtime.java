@@ -13,6 +13,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -41,6 +42,9 @@ public class Showtime {
 
     @Column(name = "available_seats", nullable = false)
     private int availableSeats;
+
+    @Column(name = "price", precision = 10, scale = 2)
+    private BigDecimal price;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -113,6 +117,14 @@ public class Showtime {
 
     public void setAvailableSeats(int availableSeats) {
         this.availableSeats = availableSeats;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
     }
 
     public Instant getCreatedAt() {

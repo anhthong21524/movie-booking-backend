@@ -7,6 +7,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 public class MovieCreateRequest {
 
     @NotBlank
@@ -26,6 +29,16 @@ public class MovieCreateRequest {
 
     @NotNull
     private MovieStatus status;
+
+    @Size(max = 100)
+    private String genre;
+
+    @Size(max = 20)
+    private String rating;
+
+    private LocalDate releaseDate;
+
+    private BigDecimal basePrice;
 
     public String getTitle() {
         return title;
@@ -65,5 +78,37 @@ public class MovieCreateRequest {
 
     public void setStatus(MovieStatus status) {
         this.status = status;
+    }
+
+    public String getGenre() {
+        return genre;
+    }
+
+    public void setGenre(String genre) {
+        this.genre = genre;
+    }
+
+    public String getRating() {
+        return rating;
+    }
+
+    public void setRating(String rating) {
+        this.rating = rating;
+    }
+
+    public LocalDate getReleaseDate() {
+        return releaseDate;
+    }
+
+    public void setReleaseDate(LocalDate releaseDate) {
+        this.releaseDate = releaseDate;
+    }
+
+    public BigDecimal getBasePrice() {
+        return basePrice;
+    }
+
+    public void setBasePrice(BigDecimal basePrice) {
+        this.basePrice = basePrice;
     }
 }
