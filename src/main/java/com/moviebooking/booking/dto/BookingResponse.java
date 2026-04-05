@@ -1,52 +1,71 @@
 package com.moviebooking.booking.dto;
 
 import com.moviebooking.booking.entity.BookingStatus;
+import com.moviebooking.showtime.dto.SeatInfo;
 
-import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.List;
 
 public class BookingResponse {
 
-    private Long bookingId;
-    private Long userId;
-    private Long showtimeId;
-    private List<String> seatNumbers;
+    private String id;
+    private String showtimeId;
+    private List<String> seatIds;
+    private List<SeatInfo> seats;
+    private BigDecimal unitPrice;
+    private BigDecimal totalAmount;
     private BookingStatus status;
-    private Instant createdAt;
-    private Instant updatedAt;
+    private String createdAt;
+    private String confirmedAt;
 
     public BookingResponse() {}
 
-    public Long getBookingId() {
-        return bookingId;
+    public String getId() {
+        return id;
     }
 
-    public void setBookingId(Long bookingId) {
-        this.bookingId = bookingId;
+    public void setId(String id) {
+        this.id = id;
     }
 
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public Long getShowtimeId() {
+    public String getShowtimeId() {
         return showtimeId;
     }
 
-    public void setShowtimeId(Long showtimeId) {
+    public void setShowtimeId(String showtimeId) {
         this.showtimeId = showtimeId;
     }
 
-    public List<String> getSeatNumbers() {
-        return seatNumbers;
+    public List<String> getSeatIds() {
+        return seatIds;
     }
 
-    public void setSeatNumbers(List<String> seatNumbers) {
-        this.seatNumbers = seatNumbers;
+    public void setSeatIds(List<String> seatIds) {
+        this.seatIds = seatIds;
+    }
+
+    public List<SeatInfo> getSeats() {
+        return seats;
+    }
+
+    public void setSeats(List<SeatInfo> seats) {
+        this.seats = seats;
+    }
+
+    public BigDecimal getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(BigDecimal unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
     }
 
     public BookingStatus getStatus() {
@@ -57,19 +76,19 @@ public class BookingResponse {
         this.status = status;
     }
 
-    public Instant getCreatedAt() {
+    public String getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Instant createdAt) {
+    public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Instant getUpdatedAt() {
-        return updatedAt;
+    public String getConfirmedAt() {
+        return confirmedAt;
     }
 
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
+    public void setConfirmedAt(String confirmedAt) {
+        this.confirmedAt = confirmedAt;
     }
 }
