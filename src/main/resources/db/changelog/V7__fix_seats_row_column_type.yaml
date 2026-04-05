@@ -1,0 +1,10 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: V7-1-seats-row-to-varchar
+      author: system
+      changes:
+        - modifyDataType:
+            tableName: seats
+            columnName: row
+            newDataType: VARCHAR(1)

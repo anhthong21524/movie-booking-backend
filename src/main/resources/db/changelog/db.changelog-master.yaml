@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/changelog/V5__seed_data.yaml
   - include:
       file: db/changelog/V6__add_user_avatar.yaml
+  - include:
+      file: db/changelog/V7__fix_seats_row_column_type.yaml

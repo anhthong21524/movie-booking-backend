@@ -23,7 +23,7 @@ public class Seat {
     @JoinColumn(name = "showtime_id", nullable = false)
     private Showtime showtime;
 
-    @Column(name = "row", nullable = false, columnDefinition = "CHAR(1)")
+    @Column(name = "row", nullable = false, length = 1)
     private String row;
 
     @Column(name = "number", nullable = false)
