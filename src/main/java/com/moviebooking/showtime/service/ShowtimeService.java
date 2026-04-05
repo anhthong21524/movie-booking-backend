@@ -13,8 +13,10 @@ import com.moviebooking.showtime.dto.SeatInfo;
 import com.moviebooking.showtime.dto.ShowtimeCreateRequest;
 import com.moviebooking.showtime.dto.ShowtimeResponse;
 import com.moviebooking.showtime.dto.ShowtimeUpdateRequest;
+import com.moviebooking.showtime.entity.Seat;
 import com.moviebooking.showtime.entity.SeatStatus;
 import com.moviebooking.showtime.entity.Showtime;
+import com.moviebooking.showtime.repository.SeatRepository;
 import com.moviebooking.showtime.repository.ShowtimeRepository;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
@@ -40,6 +42,9 @@ public class ShowtimeService {
     @Inject
     BookingSeatRepository bookingSeatRepository;
 
+    @Inject
+    SeatRepository seatRepository;
+
     public List<ShowtimeResponse> listShowtimes(Long movieId, String fromTime, String toTime) {
         movieRepository.findByIdOptional(movieId)
                 .orElseThrow(() -> new AppException(
@@ -59,16 +64,21 @@ public class ShowtimeService {
                 .orElseThrow(() -> new AppException(
                         Response.Status.NOT_FOUND, "SHOWTIME_NOT_FOUND", "No showtime found with the given ID."));
 
-        List<BookingSeat> bookedSeats = bookingSeatRepository.findActiveByShowtimeId(showtimeId);
+        List<Seat> seatEntities = seatRepository.findByShowtimeId(showtimeId);
 
-        List<SeatInfo> seats = bookedSeats.stream()
-                .map(bs -> new SeatInfo(bs.getSeatNumber(), SeatStatus.BOOKED))
+        List<SeatInfo> seats = seatEntities.stream()
+                .map(s -> new SeatInfo(
+                        String.valueOf(s.getId()),
+                        s.getLabel(),
+                        s.getRow(),
+                        s.getNumber(),
+                        s.getStatus()))
                 .collect(Collectors.toList());
 
         SeatAvailabilityResponse response = new SeatAvailabilityResponse();
-        response.setShowtimeId(showtimeId);
-        response.setTotalSeats(showtime.getTotalSeats());
-        response.setAvailableSeats(showtime.getAvailableSeats());
+        response.setShowtimeId(String.valueOf(showtimeId));
+        response.setCapacity(showtime.getTotalSeats());
+        response.setRemainingSeats(showtime.getAvailableSeats());
         response.setSeats(seats);
         return response;
     }
@@ -157,17 +167,23 @@ public class ShowtimeService {
         }
     }
 
+    public ShowtimeResponse getShowtime(Long id) {
+        Showtime showtime = showtimeRepository.findByIdOptional(id)
+                .orElseThrow(() -> new AppException(
+                        Response.Status.NOT_FOUND, "SHOWTIME_NOT_FOUND", "No showtime found with the given ID."));
+        return mapToResponse(showtime);
+    }
+
     public ShowtimeResponse mapToResponse(Showtime showtime) {
         ShowtimeResponse response = new ShowtimeResponse();
-        response.setId(showtime.getId());
-        response.setMovieId(showtime.getMovie().getId());
-        response.setRoom(showtime.getRoom());
-        response.setStartTime(showtime.getStartTime());
-        response.setEndTime(showtime.getEndTime());
-        response.setTotalSeats(showtime.getTotalSeats());
-        response.setAvailableSeats(showtime.getAvailableSeats());
-        response.setCreatedAt(showtime.getCreatedAt());
-        response.setUpdatedAt(showtime.getUpdatedAt());
+        response.setId(String.valueOf(showtime.getId()));
+        response.setMovieId(String.valueOf(showtime.getMovie().getId()));
+        response.setRoomName(showtime.getRoom());
+        response.setStartsAt(showtime.getStartTime().toString());
+        response.setEndsAt(showtime.getEndTime().toString());
+        response.setCapacity(showtime.getTotalSeats());
+        response.setRemainingSeats(showtime.getAvailableSeats());
+        response.setPrice(showtime.getPrice());
         return response;
     }
 }
