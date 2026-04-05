@@ -1,0 +1,775 @@
+{
+  "info": {
+    "name": "Movie Booking API",
+    "description": "Complete collection for the Movie Booking API. \n\nWorkflow:\n1. Run 'Register' or 'Login' — the accessToken is auto-saved to {{accessToken}}\n2. All authenticated requests use {{accessToken}} automatically\n3. To test admin endpoints, update your user role in the DB and re-login",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "movieId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "showtimeId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "bookingId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', res.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', res.refreshToken);",
+                  "    pm.test('Register successful', () => pm.response.to.have.status(201));",
+                  "    pm.test('Has accessToken', () => pm.expect(res.accessToken).to.be.a('string'));",
+                  "    pm.test('Has user object', () => pm.expect(res.user).to.have.property('id'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register a new user. Returns access + refresh tokens. accessToken is auto-saved to collection variable."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', res.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', res.refreshToken);",
+                  "    pm.test('Login successful', () => pm.response.to.have.status(200));",
+                  "    pm.test('Has accessToken', () => pm.expect(res.accessToken).to.be.a('string'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticate with email and password. accessToken is auto-saved to collection variable."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', res.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', res.refreshToken);",
+                  "    pm.test('Refresh successful', () => pm.response.to.have.status(200));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Exchange refresh token for a new access token."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Logout. Returns 204 No Content. JWT is stateless — client should discard the token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has id and email', () => {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res).to.have.property('id');",
+                  "    pm.expect(res).to.have.property('email');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Get current authenticated user's profile."
+          }
+        },
+        {
+          "name": "List My Bookings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/bookings?page=0&size=20&sort=createdAt:desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "bookings"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "createdAt:desc" },
+                { "key": "status", "value": "CONFIRMED", "disabled": true }
+              ]
+            },
+            "description": "List current user's bookings. Optional filter: status=PENDING|CONFIRMED|CANCELLED"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Movies",
+      "item": [
+        {
+          "name": "List Movies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has items array', () => {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res).to.have.property('items');",
+                  "    pm.expect(res.items).to.be.an('array');",
+                  "    if (res.items.length > 0) {",
+                  "        pm.collectionVariables.set('movieId', res.items[0].id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/movies?page=0&size=20&sort=createdAt:desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["movies"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "createdAt:desc" },
+                { "key": "status", "value": "NOW_SHOWING", "disabled": true },
+                { "key": "keyword", "value": "avengers", "disabled": true }
+              ]
+            },
+            "description": "Public. Optional filters: status=NOW_SHOWING|COMING_SOON|ARCHIVED, keyword (partial title match)."
+          }
+        },
+        {
+          "name": "Get Movie by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/movies/{{movieId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["movies", "{{movieId}}"]
+            },
+            "description": "Public. Get full movie details including description."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Movies",
+      "item": [
+        {
+          "name": "Create Movie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('movieId', res.id);",
+                  "    pm.test('Movie created', () => pm.response.to.have.status(201));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "create-movie-001", "disabled": true }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Avengers: Endgame\",\n    \"description\": \"The Avengers assemble once more to reverse Thanos's actions.\",\n    \"durationMinutes\": 181,\n    \"posterUrl\": \"https://example.com/posters/avengers.jpg\",\n    \"status\": \"NOW_SHOWING\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/movies",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "movies"]
+            },
+            "description": "ADMIN only. Create a new movie. movieId variable is auto-set from response."
+          }
+        },
+        {
+          "name": "Update Movie",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Avengers: Endgame (Updated)\",\n    \"description\": \"Updated description.\",\n    \"durationMinutes\": 182,\n    \"posterUrl\": \"https://example.com/posters/avengers-updated.jpg\",\n    \"status\": \"NOW_SHOWING\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/movies/{{movieId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "movies", "{{movieId}}"]
+            },
+            "description": "ADMIN only. Full update (PUT) of an existing movie."
+          }
+        },
+        {
+          "name": "Delete Movie",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/movies/{{movieId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "movies", "{{movieId}}"]
+            },
+            "description": "ADMIN only. Delete a movie by ID. Returns 204 No Content."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Showtimes",
+      "item": [
+        {
+          "name": "List Showtimes for Movie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "if (res.items && res.items.length > 0) {",
+                  "    pm.collectionVariables.set('showtimeId', res.items[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/showtimes?movieId={{movieId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["showtimes"],
+              "query": [
+                { "key": "movieId", "value": "{{movieId}}" },
+                { "key": "fromTime", "value": "2026-04-05T00:00:00Z", "disabled": true },
+                { "key": "toTime", "value": "2026-12-31T23:59:59Z", "disabled": true }
+              ]
+            },
+            "description": "Public. List showtimes for a movie. Optional fromTime/toTime filters (UTC ISO-8601)."
+          }
+        },
+        {
+          "name": "Get Seat Availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/showtimes/{{showtimeId}}/seats",
+              "host": ["{{baseUrl}}"],
+              "path": ["showtimes", "{{showtimeId}}", "seats"]
+            },
+            "description": "Public. Returns all booked seats for a showtime and the available seat count."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Showtimes",
+      "item": [
+        {
+          "name": "List All Showtimes (Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/showtimes?page=0&size=20&sort=startTime:asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "showtimes"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "startTime:asc" },
+                { "key": "movieId", "value": "{{movieId}}", "disabled": true },
+                { "key": "fromTime", "value": "2026-04-05T00:00:00Z", "disabled": true },
+                { "key": "toTime", "value": "2026-12-31T23:59:59Z", "disabled": true }
+              ]
+            },
+            "description": "ADMIN only. Paginated list of all showtimes across all movies."
+          }
+        },
+        {
+          "name": "Create Showtime",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('showtimeId', res.id);",
+                  "    pm.test('Showtime created', () => pm.response.to.have.status(201));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "create-showtime-001", "disabled": true }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"movieId\": {{movieId}},\n    \"room\": \"ROOM_A\",\n    \"startTime\": \"2026-05-01T10:00:00Z\",\n    \"endTime\": \"2026-05-01T13:01:00Z\",\n    \"totalSeats\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/showtimes",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "showtimes"]
+            },
+            "description": "ADMIN only. Create a showtime. Returns 409 if room/time overlaps an existing showtime."
+          }
+        },
+        {
+          "name": "Update Showtime",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"room\": \"ROOM_B\",\n    \"startTime\": \"2026-05-01T14:00:00Z\",\n    \"endTime\": \"2026-05-01T17:01:00Z\",\n    \"totalSeats\": 120\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/showtimes/{{showtimeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "showtimes", "{{showtimeId}}"]
+            },
+            "description": "ADMIN only. Full update of a showtime."
+          }
+        },
+        {
+          "name": "Delete Showtime",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/showtimes/{{showtimeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "showtimes", "{{showtimeId}}"]
+            },
+            "description": "ADMIN only. Delete a showtime. Returns 204 No Content."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const res = pm.response.json();",
+                  "    pm.collectionVariables.set('bookingId', res.bookingId);",
+                  "    pm.test('Booking created', () => pm.response.to.have.status(201));",
+                  "    pm.test('Status is CONFIRMED', () => pm.expect(res.status).to.eql('CONFIRMED'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "booking-001", "disabled": true }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"showtimeId\": {{showtimeId}},\n    \"seatNumbers\": [\"A1\", \"A2\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings"]
+            },
+            "description": "Authenticated. Reserve seats. Returns 409 if any seat is already taken. bookingId is auto-saved."
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is CANCELLED', () => {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res.status).to.eql('CANCELLED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"CANCELLED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "{{bookingId}}"]
+            },
+            "description": "Authenticated. Cancel your own booking. Returns 403 if not your booking, 409 if already cancelled."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Cases",
+      "item": [
+        {
+          "name": "Register — Duplicate Email (409)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Expected: 409 EMAIL_ALREADY_EXISTS"
+          }
+        },
+        {
+          "name": "Register — Validation Error (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"not-an-email\",\n    \"password\": \"short\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Expected: 400 VALIDATION_ERROR with field errors for email and password"
+          }
+        },
+        {
+          "name": "Login — Wrong Password (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"wrongpassword\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Expected: 401 UNAUTHORIZED"
+          }
+        },
+        {
+          "name": "Get Profile — No Token (401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Expected: 401 UNAUTHORIZED"
+          }
+        },
+        {
+          "name": "Create Movie — USER Role (403)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Test\",\n    \"durationMinutes\": 120,\n    \"status\": \"NOW_SHOWING\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/movies",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "movies"]
+            },
+            "description": "Expected: 403 FORBIDDEN (when logged in as USER role)"
+          }
+        },
+        {
+          "name": "Get Movie — Not Found (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/movies/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["movies", "99999"]
+            },
+            "description": "Expected: 404 MOVIE_NOT_FOUND"
+          }
+        },
+        {
+          "name": "Get Showtime Seats — Not Found (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/showtimes/99999/seats",
+              "host": ["{{baseUrl}}"],
+              "path": ["showtimes", "99999", "seats"]
+            },
+            "description": "Expected: 404 SHOWTIME_NOT_FOUND"
+          }
+        },
+        {
+          "name": "Create Booking — Seat Already Reserved (409)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"showtimeId\": {{showtimeId}},\n    \"seatNumbers\": [\"A1\", \"A2\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings"]
+            },
+            "description": "Expected: 409 SEAT_ALREADY_RESERVED (run after 'Create Booking')"
+          }
+        },
+        {
+          "name": "Cancel Booking — Already Cancelled (409)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"CANCELLED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings", "{{bookingId}}"]
+            },
+            "description": "Expected: 409 BOOKING_ALREADY_CANCELLED (run after 'Cancel Booking')"
+          }
+        }
+      ]
+    }
+  ]
+}
