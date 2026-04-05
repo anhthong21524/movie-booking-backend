@@ -5,3 +5,7 @@ databaseChangeLog:
       file: db/changelog/V2__add_booking.yaml
   - include:
       file: db/changelog/V3__constraints.yaml
+  - include:
+      file: db/changelog/V4__update_schema.yaml
+  - include:
+      file: db/changelog/V5__seed_data.yaml

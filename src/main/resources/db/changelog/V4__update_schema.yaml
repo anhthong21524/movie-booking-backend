@@ -1,0 +1,214 @@
+databaseChangeLog:
+
+  # ── users: add name column ────────────────────────────────────────────────────
+
+  - changeSet:
+      id: V4-1-users-add-name
+      author: system
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  defaultValue: ''
+                  constraints:
+                    nullable: false
+
+  # ── movies: add genre, rating, release_date, base_price ──────────────────────
+
+  - changeSet:
+      id: V4-2-movies-add-fields
+      author: system
+      changes:
+        - addColumn:
+            tableName: movies
+            columns:
+              - column:
+                  name: genre
+                  type: VARCHAR(100)
+              - column:
+                  name: rating
+                  type: VARCHAR(20)
+              - column:
+                  name: release_date
+                  type: DATE
+              - column:
+                  name: base_price
+                  type: DECIMAL(10,2)
+
+  # ── cinemas ───────────────────────────────────────────────────────────────────
+
+  - changeSet:
+      id: V4-3-create-cinemas
+      author: system
+      changes:
+        - createTable:
+            tableName: cinemas
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+
+  # ── rooms ─────────────────────────────────────────────────────────────────────
+
+  - changeSet:
+      id: V4-4-create-rooms
+      author: system
+      changes:
+        - createTable:
+            tableName: rooms
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: cinema_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_rooms_cinema
+                    references: cinemas(id)
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: capacity
+                  type: INT
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: V4-5-rooms-unique-name-per-cinema
+      author: system
+      changes:
+        - addUniqueConstraint:
+            tableName: rooms
+            columnNames: cinema_id, name
+            constraintName: uq_rooms_cinema_name
+
+  # ── showtimes: add cinema_id, room_id, price ─────────────────────────────────
+
+  - changeSet:
+      id: V4-6-showtimes-add-fields
+      author: system
+      changes:
+        - addColumn:
+            tableName: showtimes
+            columns:
+              - column:
+                  name: cinema_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_showtimes_cinema
+                    references: cinemas(id)
+              - column:
+                  name: room_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_showtimes_room
+                    references: rooms(id)
+              - column:
+                  name: price
+                  type: DECIMAL(10,2)
+
+  # ── bookings: add unit_price, total_amount, confirmed_at ─────────────────────
+
+  - changeSet:
+      id: V4-7-bookings-add-fields
+      author: system
+      changes:
+        - addColumn:
+            tableName: bookings
+            columns:
+              - column:
+                  name: unit_price
+                  type: DECIMAL(10,2)
+              - column:
+                  name: total_amount
+                  type: DECIMAL(10,2)
+              - column:
+                  name: confirmed_at
+                  type: TIMESTAMPTZ
+
+  # ── seats ─────────────────────────────────────────────────────────────────────
+
+  - changeSet:
+      id: V4-8-create-seats
+      author: system
+      changes:
+        - createTable:
+            tableName: seats
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: showtime_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_seats_showtime
+                    references: showtimes(id)
+              - column:
+                  name: row
+                  type: CHAR(1)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: number
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: label
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  defaultValue: AVAILABLE
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: V4-9-seats-unique-constraint
+      author: system
+      changes:
+        - addUniqueConstraint:
+            tableName: seats
+            columnNames: showtime_id, row, number
+            constraintName: uq_seats_showtime_row_number
+
+  - changeSet:
+      id: V4-10-index-seats-showtime
+      author: system
+      changes:
+        - createIndex:
+            tableName: seats
+            indexName: idx_seats_showtime_id
+            columns:
+              - column:
+                  name: showtime_id
