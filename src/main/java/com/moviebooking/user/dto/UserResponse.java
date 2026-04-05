@@ -10,6 +10,7 @@ public class UserResponse {
     private String email;
     private UserRole role;
     private Instant createdAt;
+    private String avatar;
 
     public UserResponse() {}
 
@@ -43,5 +44,13 @@ public class UserResponse {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
     }
 }
