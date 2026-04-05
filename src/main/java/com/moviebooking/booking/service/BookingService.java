@@ -157,6 +157,15 @@ public class BookingService {
         return mapToBookingResponse(booking);
     }
 
+    public List<BookingResponse> getMyBookings(Long userId) {
+        Sort sort = Sort.descending("createdAt");
+        return bookingRepository.findByUserId(userId, null, sort)
+                .list()
+                .stream()
+                .map(this::mapToBookingResponse)
+                .collect(Collectors.toList());
+    }
+
     public BookingResponse getBookingById(Long bookingId, Long currentUserId) {
         Booking booking = bookingRepository.findByIdOptional(bookingId)
                 .orElseThrow(() -> new AppException(
