@@ -11,7 +11,9 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "movies")
@@ -36,6 +38,18 @@ public class Movie {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private MovieStatus status;
+
+    @Column(length = 100)
+    private String genre;
+
+    @Column(length = 20)
+    private String rating;
+
+    @Column(name = "release_date")
+    private LocalDate releaseDate;
+
+    @Column(name = "base_price", precision = 10, scale = 2)
+    private BigDecimal basePrice;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -100,6 +114,38 @@ public class Movie {
 
     public void setStatus(MovieStatus status) {
         this.status = status;
+    }
+
+    public String getGenre() {
+        return genre;
+    }
+
+    public void setGenre(String genre) {
+        this.genre = genre;
+    }
+
+    public String getRating() {
+        return rating;
+    }
+
+    public void setRating(String rating) {
+        this.rating = rating;
+    }
+
+    public LocalDate getReleaseDate() {
+        return releaseDate;
+    }
+
+    public void setReleaseDate(LocalDate releaseDate) {
+        this.releaseDate = releaseDate;
+    }
+
+    public BigDecimal getBasePrice() {
+        return basePrice;
+    }
+
+    public void setBasePrice(BigDecimal basePrice) {
+        this.basePrice = basePrice;
     }
 
     public Instant getCreatedAt() {

@@ -1,90 +1,81 @@
 package com.moviebooking.showtime.dto;
 
-import java.time.Instant;
+import java.math.BigDecimal;
 
 public class ShowtimeResponse {
 
-    private Long id;
-    private Long movieId;
-    private String room;
-    private Instant startTime;
-    private Instant endTime;
-    private int totalSeats;
-    private int availableSeats;
-    private Instant createdAt;
-    private Instant updatedAt;
+    private String id;
+    private String movieId;
+    private String roomName;
+    private String startsAt;
+    private String endsAt;
+    private int capacity;
+    private int remainingSeats;
+    private BigDecimal price;
 
     public ShowtimeResponse() {}
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public Long getMovieId() {
+    public String getMovieId() {
         return movieId;
     }
 
-    public void setMovieId(Long movieId) {
+    public void setMovieId(String movieId) {
         this.movieId = movieId;
     }
 
-    public String getRoom() {
-        return room;
+    public String getRoomName() {
+        return roomName;
     }
 
-    public void setRoom(String room) {
-        this.room = room;
+    public void setRoomName(String roomName) {
+        this.roomName = roomName;
     }
 
-    public Instant getStartTime() {
-        return startTime;
+    public String getStartsAt() {
+        return startsAt;
     }
 
-    public void setStartTime(Instant startTime) {
-        this.startTime = startTime;
+    public void setStartsAt(String startsAt) {
+        this.startsAt = startsAt;
     }
 
-    public Instant getEndTime() {
-        return endTime;
+    public String getEndsAt() {
+        return endsAt;
     }
 
-    public void setEndTime(Instant endTime) {
-        this.endTime = endTime;
+    public void setEndsAt(String endsAt) {
+        this.endsAt = endsAt;
     }
 
-    public int getTotalSeats() {
-        return totalSeats;
+    public int getCapacity() {
+        return capacity;
     }
 
-    public void setTotalSeats(int totalSeats) {
-        this.totalSeats = totalSeats;
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
     }
 
-    public int getAvailableSeats() {
-        return availableSeats;
+    public int getRemainingSeats() {
+        return remainingSeats;
     }
 
-    public void setAvailableSeats(int availableSeats) {
-        this.availableSeats = availableSeats;
+    public void setRemainingSeats(int remainingSeats) {
+        this.remainingSeats = remainingSeats;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
+    public BigDecimal getPrice() {
+        return price;
     }
 
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
+    public void setPrice(BigDecimal price) {
+        this.price = price;
     }
 }

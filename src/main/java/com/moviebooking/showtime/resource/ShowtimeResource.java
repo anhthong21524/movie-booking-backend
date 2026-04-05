@@ -30,6 +30,12 @@ public class ShowtimeResource {
     }
 
     @GET
+    @Path("/{showtimeId}")
+    public Response getShowtime(@PathParam("showtimeId") Long showtimeId) {
+        return Response.ok(showtimeService.getShowtime(showtimeId)).build();
+    }
+
+    @GET
     @Path("/{showtimeId}/seats")
     public Response listShowtimeSeats(@PathParam("showtimeId") Long showtimeId) {
         return Response.ok(showtimeService.getSeats(showtimeId)).build();

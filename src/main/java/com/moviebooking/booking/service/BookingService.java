@@ -12,7 +12,11 @@ import com.moviebooking.common.exception.AppException;
 import com.moviebooking.common.response.FieldError;
 import com.moviebooking.common.response.PageResponse;
 import com.moviebooking.common.util.SortUtil;
+import com.moviebooking.showtime.dto.SeatInfo;
+import com.moviebooking.showtime.entity.Seat;
+import com.moviebooking.showtime.entity.SeatStatus;
 import com.moviebooking.showtime.entity.Showtime;
+import com.moviebooking.showtime.repository.SeatRepository;
 import com.moviebooking.showtime.repository.ShowtimeRepository;
 import com.moviebooking.user.entity.User;
 import com.moviebooking.user.repository.UserRepository;
@@ -23,6 +27,8 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.Response;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -42,11 +48,13 @@ public class BookingService {
     ShowtimeRepository showtimeRepository;
 
     @Inject
+    SeatRepository seatRepository;
+
+    @Inject
     UserRepository userRepository;
 
     @Transactional
     public BookingResponse createBooking(Long userId, BookingCreateRequest request, String idempotencyKey) {
-        // Idempotency check
         if (idempotencyKey != null) {
             Optional<Booking> existing = bookingRepository.findByIdempotencyKey(idempotencyKey);
             if (existing.isPresent()) {
@@ -54,12 +62,11 @@ public class BookingService {
             }
         }
 
-        // Validate unique seat numbers in request
-        List<String> seatNumbers = request.getSeatNumbers();
-        if (new HashSet<>(seatNumbers).size() != seatNumbers.size()) {
+        List<Long> seatIds = request.getSeatIds();
+        if (new HashSet<>(seatIds).size() != seatIds.size()) {
             throw new AppException(Response.Status.BAD_REQUEST, "VALIDATION_ERROR",
-                    "Seat numbers must be unique.",
-                    Collections.singletonList(new FieldError("seatNumbers", "must contain unique items")));
+                    "Seat IDs must be unique.",
+                    Collections.singletonList(new FieldError("seatIds", "must contain unique items")));
         }
 
         Showtime showtime = showtimeRepository.findByIdOptional(request.getShowtimeId())
@@ -70,10 +77,24 @@ public class BookingService {
                 .orElseThrow(() -> new AppException(
                         Response.Status.UNAUTHORIZED, "UNAUTHORIZED", "Authentication is required."));
 
-        if (bookingSeatRepository.anyActiveForSeats(showtime.getId(), seatNumbers)) {
+        List<Seat> seats = seatRepository.findByShowtimeId(showtime.getId()).stream()
+                .filter(s -> seatIds.contains(s.getId()))
+                .collect(Collectors.toList());
+
+        if (seats.size() != seatIds.size()) {
+            throw new AppException(Response.Status.BAD_REQUEST, "VALIDATION_ERROR",
+                    "One or more seat IDs are invalid for this showtime.",
+                    Collections.singletonList(new FieldError("seatIds", "invalid seat IDs")));
+        }
+
+        List<Seat> unavailable = seats.stream()
+                .filter(s -> s.getStatus() != SeatStatus.AVAILABLE)
+                .collect(Collectors.toList());
+
+        if (!unavailable.isEmpty()) {
             throw new AppException(Response.Status.CONFLICT, "SEAT_ALREADY_RESERVED",
                     "One or more selected seats are already reserved.",
-                    Collections.singletonList(new FieldError("seatNumbers", "already reserved")));
+                    Collections.singletonList(new FieldError("seatIds", "already reserved")));
         }
 
         Booking booking = new Booking();
@@ -81,19 +102,25 @@ public class BookingService {
         booking.setShowtime(showtime);
         booking.setStatus(BookingStatus.CONFIRMED);
         booking.setIdempotencyKey(idempotencyKey);
+        booking.setConfirmedAt(Instant.now());
         bookingRepository.persist(booking);
 
-        for (String seatNumber : seatNumbers) {
+        for (Seat seat : seats) {
+            seat.setStatus(SeatStatus.BOOKED);
+
             BookingSeat bs = new BookingSeat();
             bs.setBooking(booking);
             bs.setShowtime(showtime);
-            bs.setSeatNumber(seatNumber);
+            bs.setSeatNumber(seat.getLabel());
             bookingSeatRepository.persist(bs);
         }
 
-        showtime.setAvailableSeats(showtime.getAvailableSeats() - seatNumbers.size());
+        showtime.setAvailableSeats(showtime.getAvailableSeats() - seats.size());
 
-        return mapToBookingResponse(booking, seatNumbers);
+        BigDecimal unitPrice = showtime.getPrice() != null ? showtime.getPrice() : BigDecimal.ZERO;
+        BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(seats.size()));
+
+        return mapToBookingResponse(booking, seats, unitPrice, totalAmount);
     }
 
     @Transactional
@@ -112,17 +139,35 @@ public class BookingService {
                     "This booking has already been cancelled.");
         }
 
-        List<BookingSeat> seats = bookingSeatRepository.findByBookingId(booking.getId());
-        List<String> seatNumbers = seats.stream()
-                .map(BookingSeat::getSeatNumber)
-                .collect(Collectors.toList());
-
         booking.setStatus(BookingStatus.CANCELLED);
 
         Showtime showtime = booking.getShowtime();
-        showtime.setAvailableSeats(showtime.getAvailableSeats() + seats.size());
+        List<BookingSeat> bookingSeats = bookingSeatRepository.findByBookingId(booking.getId());
+        showtime.setAvailableSeats(showtime.getAvailableSeats() + bookingSeats.size());
 
-        return mapToBookingResponse(booking, seatNumbers);
+        List<Seat> seats = seatRepository.findByShowtimeId(showtime.getId()).stream()
+                .filter(s -> bookingSeats.stream()
+                        .anyMatch(bs -> bs.getSeatNumber().equals(s.getLabel())))
+                .collect(Collectors.toList());
+
+        for (Seat seat : seats) {
+            seat.setStatus(SeatStatus.AVAILABLE);
+        }
+
+        return mapToBookingResponse(booking);
+    }
+
+    public BookingResponse getBookingById(Long bookingId, Long currentUserId) {
+        Booking booking = bookingRepository.findByIdOptional(bookingId)
+                .orElseThrow(() -> new AppException(
+                        Response.Status.NOT_FOUND, "BOOKING_NOT_FOUND", "No booking found with the given ID."));
+
+        if (!booking.getUser().getId().equals(currentUserId)) {
+            throw new AppException(Response.Status.FORBIDDEN, "FORBIDDEN",
+                    "You do not have permission to access this resource.");
+        }
+
+        return mapToBookingResponse(booking);
     }
 
     public PageResponse<BookingSummaryResponse> listMyBookings(Long userId, int page, int size,
@@ -139,22 +184,33 @@ public class BookingService {
     }
 
     private BookingResponse mapToBookingResponse(Booking booking) {
-        List<String> seatNumbers = bookingSeatRepository.findByBookingId(booking.getId())
-                .stream()
-                .map(BookingSeat::getSeatNumber)
+        List<BookingSeat> bookingSeats = bookingSeatRepository.findByBookingId(booking.getId());
+        List<Seat> seats = bookingSeats.stream()
+                .flatMap(bs -> seatRepository.findByShowtimeId(booking.getShowtime().getId()).stream()
+                        .filter(s -> s.getLabel().equals(bs.getSeatNumber())))
                 .collect(Collectors.toList());
-        return mapToBookingResponse(booking, seatNumbers);
+        BigDecimal unitPrice = booking.getShowtime().getPrice() != null
+                ? booking.getShowtime().getPrice() : BigDecimal.ZERO;
+        BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(seats.size()));
+        return mapToBookingResponse(booking, seats, unitPrice, totalAmount);
     }
 
-    private BookingResponse mapToBookingResponse(Booking booking, List<String> seatNumbers) {
+    private BookingResponse mapToBookingResponse(Booking booking, List<Seat> seats,
+            BigDecimal unitPrice, BigDecimal totalAmount) {
         BookingResponse response = new BookingResponse();
-        response.setBookingId(booking.getId());
-        response.setUserId(booking.getUser().getId());
-        response.setShowtimeId(booking.getShowtime().getId());
-        response.setSeatNumbers(seatNumbers);
+        response.setId(String.valueOf(booking.getId()));
+        response.setShowtimeId(String.valueOf(booking.getShowtime().getId()));
+        response.setSeatIds(seats.stream().map(s -> String.valueOf(s.getId())).collect(Collectors.toList()));
+        response.setSeats(seats.stream()
+                .map(s -> new SeatInfo(String.valueOf(s.getId()), s.getLabel(), s.getRow(), s.getNumber(), s.getStatus()))
+                .collect(Collectors.toList()));
+        response.setUnitPrice(unitPrice);
+        response.setTotalAmount(totalAmount);
         response.setStatus(booking.getStatus());
-        response.setCreatedAt(booking.getCreatedAt());
-        response.setUpdatedAt(booking.getUpdatedAt());
+        response.setCreatedAt(booking.getCreatedAt().toString());
+        if (booking.getConfirmedAt() != null) {
+            response.setConfirmedAt(booking.getConfirmedAt().toString());
+        }
         return response;
     }
 

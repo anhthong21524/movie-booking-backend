@@ -2,26 +2,28 @@ package com.moviebooking.movie.dto;
 
 import com.moviebooking.movie.entity.MovieStatus;
 
-import java.time.Instant;
+import java.math.BigDecimal;
 
 public class MovieResponse {
 
-    private Long id;
+    private String id;
     private String title;
     private String description;
     private int durationMinutes;
     private String posterUrl;
     private MovieStatus status;
-    private Instant createdAt;
-    private Instant updatedAt;
+    private String genre;
+    private String rating;
+    private String releaseDate;
+    private BigDecimal basePrice;
 
     public MovieResponse() {}
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -65,19 +67,35 @@ public class MovieResponse {
         this.status = status;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
+    public String getGenre() {
+        return genre;
     }
 
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
+    public void setGenre(String genre) {
+        this.genre = genre;
     }
 
-    public Instant getUpdatedAt() {
-        return updatedAt;
+    public String getRating() {
+        return rating;
     }
 
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
+    public void setRating(String rating) {
+        this.rating = rating;
+    }
+
+    public String getReleaseDate() {
+        return releaseDate;
+    }
+
+    public void setReleaseDate(String releaseDate) {
+        this.releaseDate = releaseDate;
+    }
+
+    public BigDecimal getBasePrice() {
+        return basePrice;
+    }
+
+    public void setBasePrice(BigDecimal basePrice) {
+        this.basePrice = basePrice;
     }
 }

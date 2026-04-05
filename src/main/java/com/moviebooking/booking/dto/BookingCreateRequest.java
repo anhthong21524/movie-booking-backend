@@ -1,9 +1,7 @@
 package com.moviebooking.booking.dto;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
@@ -11,12 +9,11 @@ import java.util.List;
 public class BookingCreateRequest {
 
     @NotNull
-    @Min(1)
     private Long showtimeId;
 
     @NotEmpty
     @Size(min = 1, max = 20)
-    private List<@NotNull @Pattern(regexp = "^[A-Z][0-9]{1,2}$") String> seatNumbers;
+    private List<@NotNull Long> seatIds;
 
     public Long getShowtimeId() {
         return showtimeId;
@@ -26,11 +23,11 @@ public class BookingCreateRequest {
         this.showtimeId = showtimeId;
     }
 
-    public List<String> getSeatNumbers() {
-        return seatNumbers;
+    public List<Long> getSeatIds() {
+        return seatIds;
     }
 
-    public void setSeatNumbers(List<String> seatNumbers) {
-        this.seatNumbers = seatNumbers;
+    public void setSeatIds(List<Long> seatIds) {
+        this.seatIds = seatIds;
     }
 }

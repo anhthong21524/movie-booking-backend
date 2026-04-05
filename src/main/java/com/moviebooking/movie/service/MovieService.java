@@ -53,6 +53,10 @@ public class MovieService {
         movie.setDurationMinutes(request.getDurationMinutes());
         movie.setPosterUrl(request.getPosterUrl());
         movie.setStatus(request.getStatus());
+        movie.setGenre(request.getGenre());
+        movie.setRating(request.getRating());
+        movie.setReleaseDate(request.getReleaseDate());
+        movie.setBasePrice(request.getBasePrice());
         movieRepository.persist(movie);
         return mapToResponse(movie);
     }
@@ -67,6 +71,10 @@ public class MovieService {
         movie.setDurationMinutes(request.getDurationMinutes());
         movie.setPosterUrl(request.getPosterUrl());
         movie.setStatus(request.getStatus());
+        movie.setGenre(request.getGenre());
+        movie.setRating(request.getRating());
+        movie.setReleaseDate(request.getReleaseDate());
+        movie.setBasePrice(request.getBasePrice());
         return mapToResponse(movie);
     }
 
@@ -80,14 +88,16 @@ public class MovieService {
 
     public MovieResponse mapToResponse(Movie movie) {
         MovieResponse response = new MovieResponse();
-        response.setId(movie.getId());
+        response.setId(String.valueOf(movie.getId()));
         response.setTitle(movie.getTitle());
         response.setDescription(movie.getDescription());
         response.setDurationMinutes(movie.getDurationMinutes());
         response.setPosterUrl(movie.getPosterUrl());
         response.setStatus(movie.getStatus());
-        response.setCreatedAt(movie.getCreatedAt());
-        response.setUpdatedAt(movie.getUpdatedAt());
+        response.setGenre(movie.getGenre());
+        response.setRating(movie.getRating());
+        response.setReleaseDate(movie.getReleaseDate() != null ? movie.getReleaseDate().toString() : null);
+        response.setBasePrice(movie.getBasePrice());
         return response;
     }
 }

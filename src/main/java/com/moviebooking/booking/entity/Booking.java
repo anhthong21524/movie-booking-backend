@@ -50,6 +50,9 @@ public class Booking {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "confirmed_at")
+    private Instant confirmedAt;
+
     @OneToMany(mappedBy = "booking", fetch = FetchType.LAZY)
     private List<BookingSeat> seats = new ArrayList<>();
 
@@ -126,5 +129,13 @@ public class Booking {
 
     public void setSeats(List<BookingSeat> seats) {
         this.seats = seats;
+    }
+
+    public Instant getConfirmedAt() {
+        return confirmedAt;
+    }
+
+    public void setConfirmedAt(Instant confirmedAt) {
+        this.confirmedAt = confirmedAt;
     }
 }

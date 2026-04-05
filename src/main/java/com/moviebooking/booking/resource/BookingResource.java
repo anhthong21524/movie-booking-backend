@@ -7,6 +7,7 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
@@ -37,6 +38,13 @@ public class BookingResource {
         return Response.status(Response.Status.CREATED)
                 .entity(bookingService.createBooking(userId, request, idempotencyKey))
                 .build();
+    }
+
+    @GET
+    @Path("/{bookingId}")
+    public Response getBooking(@PathParam("bookingId") Long bookingId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        return Response.ok(bookingService.getBookingById(bookingId, userId)).build();
     }
 
     @PATCH
