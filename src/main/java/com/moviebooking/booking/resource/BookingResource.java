@@ -30,6 +30,12 @@ public class BookingResource {
     @Inject
     BookingService bookingService;
 
+    @GET
+    public Response getMyBookings() {
+        Long userId = Long.parseLong(jwt.getSubject());
+        return Response.ok(bookingService.getMyBookings(userId)).build();
+    }
+
     @POST
     public Response createBooking(
             @HeaderParam("Idempotency-Key") String idempotencyKey,
