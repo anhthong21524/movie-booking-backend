@@ -2,7 +2,7 @@
 FROM gradle:8.5-jdk21 AS build
 WORKDIR /app
 COPY . .
-RUN gradle build -x test --no-daemon
+RUN chmod +x gradlew && ./gradlew build -x test --no-daemon
 
 # Stage 2: Runtime
 FROM registry.access.redhat.com/ubi9/openjdk-21-runtime:1.24
