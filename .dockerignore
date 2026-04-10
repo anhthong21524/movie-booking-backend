@@ -1,5 +1,12 @@
-*
-!build/*-runner
-!build/*-runner.jar
-!build/lib/*
-!build/quarkus-app/*
+# Exclude local build output (rebuilt inside Docker)
+build/
+
+# Exclude IDE and OS files
+.gradle/
+.idea/
+*.iml
+.DS_Store
+
+# Exclude docs and local config
+docs/
+.env
