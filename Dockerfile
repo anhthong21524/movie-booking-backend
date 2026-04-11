@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM gradle:8.5-jdk21 AS build
+FROM gradle:9.3-jdk21 AS build
 WORKDIR /app
 COPY . .
 RUN chmod +x gradlew && ./gradlew build -x test --no-daemon
