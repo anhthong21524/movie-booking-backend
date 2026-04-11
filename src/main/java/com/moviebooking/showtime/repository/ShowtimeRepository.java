@@ -14,6 +14,10 @@ import java.util.Map;
 @ApplicationScoped
 public class ShowtimeRepository implements PanacheRepository<Showtime> {
 
+    public long countByMovieId(Long movieId) {
+        return count("movie.id", movieId);
+    }
+
     public boolean hasOverlap(String room, Instant startTime, Instant endTime, Long excludeId) {
         StringBuilder query = new StringBuilder(
                 "room = :room and startTime < :endTime and endTime > :startTime");

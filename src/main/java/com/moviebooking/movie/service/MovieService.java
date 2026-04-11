@@ -9,6 +9,7 @@ import com.moviebooking.movie.dto.MovieUpdateRequest;
 import com.moviebooking.movie.entity.Movie;
 import com.moviebooking.movie.entity.MovieStatus;
 import com.moviebooking.movie.repository.MovieRepository;
+import com.moviebooking.showtime.repository.ShowtimeRepository;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -24,6 +25,9 @@ public class MovieService {
 
     @Inject
     MovieRepository movieRepository;
+
+    @Inject
+    ShowtimeRepository showtimeRepository;
 
     public PageResponse<MovieResponse> listMovies(int page, int size, String sortParam,
             MovieStatus status, String keyword) {
@@ -83,6 +87,10 @@ public class MovieService {
         Movie movie = movieRepository.findByIdOptional(id)
                 .orElseThrow(() -> new AppException(
                         Response.Status.NOT_FOUND, "MOVIE_NOT_FOUND", "No movie found with the given ID."));
+        if (showtimeRepository.countByMovieId(id) > 0) {
+            throw new AppException(Response.Status.CONFLICT, "MOVIE_HAS_SHOWTIMES",
+                    "Cannot delete a movie that has associated showtimes.");
+        }
         movieRepository.delete(movie);
     }
 

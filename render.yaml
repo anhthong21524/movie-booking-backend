@@ -5,10 +5,18 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /q/health
     envVars:
-      - key: DB_URL
+      - key: DB_HOST
         fromDatabase:
           name: movie-booking-db
-          property: connectionString
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: movie-booking-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: movie-booking-db
+          property: database
       - key: DB_USERNAME
         fromDatabase:
           name: movie-booking-db
