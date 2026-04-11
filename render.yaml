@@ -5,18 +5,9 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /q/health
     envVars:
-      - key: DB_HOST
-        fromDatabase:
-          name: movie-booking-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: movie-booking-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: movie-booking-db
-          property: database
+      # DB_URL must be set manually in the Render dashboard as:
+      # jdbc:postgresql://<host>:<port>/<dbname>
+      # Render's connectionString property omits the required "jdbc:" prefix.
       - key: DB_USERNAME
         fromDatabase:
           name: movie-booking-db
