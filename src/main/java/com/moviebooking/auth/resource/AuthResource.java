@@ -2,6 +2,7 @@ package com.moviebooking.auth.resource;
 
 import com.moviebooking.auth.dto.AuthResponse;
 import com.moviebooking.auth.dto.LoginRequest;
+import com.moviebooking.auth.dto.OAuthLoginRequest;
 import com.moviebooking.auth.dto.RefreshRequest;
 import com.moviebooking.auth.dto.RegisterRequest;
 import com.moviebooking.auth.service.AuthService;
@@ -30,6 +31,14 @@ public class AuthResource {
     public Response register(@Valid RegisterRequest request) {
         AuthResponse response = authService.register(request);
         return Response.status(Response.Status.CREATED).entity(response).build();
+    }
+
+    @POST
+    @Path("/oauth")
+    @PermitAll
+    public Response oauthLogin(@Valid OAuthLoginRequest request) {
+        AuthResponse response = authService.oauthLogin(request);
+        return Response.ok(response).build();
     }
 
     @POST

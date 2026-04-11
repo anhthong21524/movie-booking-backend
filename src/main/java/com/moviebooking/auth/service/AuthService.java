@@ -2,6 +2,7 @@ package com.moviebooking.auth.service;
 
 import com.moviebooking.auth.dto.AuthResponse;
 import com.moviebooking.auth.dto.LoginRequest;
+import com.moviebooking.auth.dto.OAuthLoginRequest;
 import com.moviebooking.auth.dto.RefreshRequest;
 import com.moviebooking.auth.dto.RegisterRequest;
 import com.moviebooking.common.exception.AppException;
@@ -23,6 +24,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @ApplicationScoped
 public class AuthService {
@@ -58,6 +60,22 @@ public class AuthService {
         userRepository.persist(user);
 
         return buildAuthResponse(user);
+    }
+
+    @Transactional
+    public AuthResponse oauthLogin(OAuthLoginRequest request) {
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+
+        return userRepository.findByEmail(normalizedEmail)
+                .map(this::buildAuthResponse)
+                .orElseGet(() -> {
+                    User user = new User();
+                    user.setEmail(normalizedEmail);
+                    user.setPassword(BcryptUtil.bcryptHash(UUID.randomUUID().toString()));
+                    user.setRole(UserRole.USER);
+                    userRepository.persist(user);
+                    return buildAuthResponse(user);
+                });
     }
 
     public AuthResponse login(LoginRequest request) {
