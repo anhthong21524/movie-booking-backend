@@ -141,6 +141,38 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /auth/oauth:
+    post:
+      tags: [Auth]
+      summary: Sign in or register via OAuth (e.g. Google)
+      description: >
+        Finds an existing account by email or creates a new one if none exists.
+        The created account has no usable password — it can only be accessed via OAuth.
+        Returns a full JWT access + refresh token pair identical to the login response.
+      operationId: oauthLogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+      responses:
+        '200':
+          description: OAuth sign-in successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
   /auth/logout:
     post:
       tags: [Auth]
