@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
   title: Movie Booking API
-  version: 1.2.0
+  version: 1.3.0
   description: >
     REST API for browsing movies, viewing showtimes, reserving seats, and
     managing bookings.
 
-    All resource IDs are strings (UUIDs). All timestamps are ISO 8601 UTC
+    Resource IDs are numeric integers. Timestamps are ISO 8601 UTC
     (e.g. 2026-04-05T10:00:00Z).
 
     Field names use camelCase throughout to match the frontend TypeScript
@@ -28,10 +28,8 @@ tags:
     description: List showtimes and check seat availability.
   - name: Admin Showtimes
     description: Create, update, and delete showtimes (ADMIN only).
-  - name: Admin Cinemas
-    description: List cinemas and rooms for showtime scheduling (ADMIN only).
   - name: Bookings
-    description: Create, confirm, and cancel bookings; view booking history.
+    description: Create and cancel bookings; view booking history.
 
 security:
   - bearerAuth: []
@@ -52,12 +50,8 @@ paths:
           application/json:
             schema:
               type: object
-              required: [name, email, password]
+              required: [email, password]
               properties:
-                name:
-                  type: string
-                  minLength: 1
-                  maxLength: 100
                 email:
                   type: string
                   format: email
@@ -201,10 +195,51 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /users/me/avatar:
+    put:
+      tags: [Users]
+      summary: Update current user avatar
+      operationId: updateAvatar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  description: Base64-encoded image data (max ~200 KB).
+      responses:
+        '200':
+          description: Avatar updated; returns updated user profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Users]
+      summary: Remove current user avatar
+      operationId: removeAvatar
+      responses:
+        '200':
+          description: Avatar removed; returns updated user profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /users/me/bookings:
     get:
       tags: [Users]
-      summary: List my bookings (ticket history)
+      summary: List my bookings (paginated)
       operationId: listMyBookings
       parameters:
         - $ref: '#/components/parameters/PageParam'
@@ -218,9 +253,7 @@ paths:
             $ref: '#/components/schemas/BookingStatus'
       responses:
         '200':
-          description: >
-            Paginated booking list. Each item embeds the showtime and movie
-            so the tickets page can render without additional fetches.
+          description: Paginated booking summary list.
           content:
             application/json:
               schema:
@@ -230,7 +263,7 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: '#/components/schemas/BookingWithContext'
+                      $ref: '#/components/schemas/BookingSummary'
                   page:
                     type: integer
                     minimum: 0
@@ -283,7 +316,7 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: '#/components/schemas/MovieSummary'
+                      $ref: '#/components/schemas/MovieItem'
                   page:
                     type: integer
                     minimum: 0
@@ -313,57 +346,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MovieDetail'
+                $ref: '#/components/schemas/MovieItem'
         '404':
           $ref: '#/components/responses/MovieNotFound'
 
   # ── Admin Movies ──────────────────────────────────────────────────────────────
 
   /admin/movies:
-    get:
-      tags: [Admin Movies]
-      summary: List all movies
-      operationId: adminListMovies
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/SizeParam'
-        - $ref: '#/components/parameters/SortParam'
-        - name: keyword
-          in: query
-          required: false
-          schema:
-            type: string
-            maxLength: 100
-      responses:
-        '200':
-          description: Paginated movie list
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [items, page, size, totalItems, totalPages]
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/MovieDetail'
-                  page:
-                    type: integer
-                    minimum: 0
-                  size:
-                    type: integer
-                    minimum: 1
-                  totalItems:
-                    type: integer
-                    minimum: 0
-                  totalPages:
-                    type: integer
-                    minimum: 0
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
     post:
       tags: [Admin Movies]
       summary: Create a movie
@@ -382,7 +371,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MovieDetail'
+                $ref: '#/components/schemas/MovieItem'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -391,9 +380,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
 
   /admin/movies/{movieId}:
-    patch:
+    put:
       tags: [Admin Movies]
-      summary: Update a movie (partial update)
+      summary: Update a movie
       operationId: updateMovie
       parameters:
         - $ref: '#/components/parameters/MovieIdPath'
@@ -410,7 +399,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MovieDetail'
+                $ref: '#/components/schemas/MovieItem'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -436,44 +425,6 @@ paths:
         '404':
           $ref: '#/components/responses/MovieNotFound'
 
-  /admin/movies/upload-poster:
-    post:
-      tags: [Admin Movies]
-      summary: Upload a movie poster image
-      operationId: uploadPoster
-      description: >
-        Accepts a binary image upload (JPEG, PNG, WebP; max 5 MB).
-        Returns a permanent URL to set as posterUrl on a movie.
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [file]
-              properties:
-                file:
-                  type: string
-                  format: binary
-      responses:
-        '200':
-          description: Poster uploaded
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [posterUrl]
-                properties:
-                  posterUrl:
-                    type: string
-                    format: uri
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
   # ── Showtimes ─────────────────────────────────────────────────────────────────
 
   /showtimes:
@@ -487,7 +438,7 @@ paths:
           in: query
           required: true
           schema:
-            type: string
+            type: integer
         - name: fromTime
           in: query
           required: false
@@ -589,7 +540,7 @@ paths:
           in: query
           required: false
           schema:
-            type: string
+            type: integer
         - name: fromTime
           in: query
           required: false
@@ -604,9 +555,7 @@ paths:
             format: date-time
       responses:
         '200':
-          description: >
-            Paginated showtime list. Each item includes movie title and
-            cinema/room details needed by the admin scheduling panel.
+          description: Paginated showtime list.
           content:
             application/json:
               schema:
@@ -616,7 +565,7 @@ paths:
                   items:
                     type: array
                     items:
-                      $ref: '#/components/schemas/AdminShowtimeItem'
+                      $ref: '#/components/schemas/ShowtimeItem'
                   page:
                     type: integer
                     minimum: 0
@@ -641,8 +590,6 @@ paths:
       summary: Create a showtime
       operationId: createShowtime
       description: >
-        The end time is derived from the movie's durationMinutes.
-        The room capacity is derived from the selected room.
         Overlap check is performed against existing showtimes in the same room.
         Adjacent showtimes are allowed: a showtime may start exactly when the
         previous one ends (startTime == previousEndTime is not an overlap).
@@ -660,7 +607,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AdminShowtimeItem'
+                $ref: '#/components/schemas/ShowtimeItem'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -673,7 +620,7 @@ paths:
           $ref: '#/components/responses/ShowtimeOverlap'
 
   /admin/showtimes/{showtimeId}:
-    patch:
+    put:
       tags: [Admin Showtimes]
       summary: Update a showtime
       operationId: updateShowtime
@@ -685,14 +632,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShowtimeWriteBody'
+              $ref: '#/components/schemas/ShowtimeUpdateBody'
       responses:
         '200':
           description: Showtime updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AdminShowtimeItem'
+                $ref: '#/components/schemas/ShowtimeItem'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -720,46 +667,35 @@ paths:
         '404':
           $ref: '#/components/responses/ShowtimeNotFound'
 
-  # ── Admin Cinemas ─────────────────────────────────────────────────────────────
-
-  /admin/cinemas:
-    get:
-      tags: [Admin Cinemas]
-      summary: List all cinemas with their rooms
-      operationId: listCinemas
-      description: >
-        Returns the full cinema and room catalogue used to populate the
-        cinema and room selectors in the admin showtime scheduling form.
-      responses:
-        '200':
-          description: Cinema list
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [items]
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/CinemaLocation'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
   # ── Bookings ──────────────────────────────────────────────────────────────────
 
   /bookings:
+    get:
+      tags: [Bookings]
+      summary: List my bookings (unpaginated)
+      operationId: getMyBookings
+      description: >
+        Returns all bookings for the authenticated user without pagination.
+        For paginated results with status filtering, use GET /users/me/bookings.
+      responses:
+        '200':
+          description: Booking list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookingSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
     post:
       tags: [Bookings]
       summary: Create a booking
       operationId: createBooking
       description: >
-        Creates a PENDING booking and marks the selected seats as HELD.
-        The booking must be confirmed via PATCH /bookings/{bookingId}/confirm
-        to become CONFIRMED. Seats held by expired PENDING bookings are
-        released automatically by the server.
+        Creates a booking and marks the selected seats as BOOKED.
+        Idempotency key prevents duplicate bookings on retry.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -771,20 +707,17 @@ paths:
               required: [showtimeId, seatIds]
               properties:
                 showtimeId:
-                  type: string
+                  type: integer
                 seatIds:
                   type: array
                   minItems: 1
-                  maxItems: 6
-                  uniqueItems: true
+                  maxItems: 20
                   items:
-                    type: string
-                  description: >
-                    IDs of seats from GET /showtimes/{showtimeId}/seats.
-                    Maximum 6 seats per booking.
+                    type: integer
+                  description: IDs of seats from GET /showtimes/{showtimeId}/seats.
       responses:
         '201':
-          description: Booking created (PENDING); seats are held.
+          description: Booking created.
           content:
             application/json:
               schema:
@@ -803,9 +736,6 @@ paths:
       tags: [Bookings]
       summary: Get booking details
       operationId: getBooking
-      description: >
-        Returns the full booking including seat objects.
-        Used by the checkout page to display booking summary before confirmation.
       parameters:
         - $ref: '#/components/parameters/BookingIdPath'
       responses:
@@ -861,33 +791,6 @@ paths:
         '409':
           $ref: '#/components/responses/BookingAlreadyCancelled'
 
-  /bookings/{bookingId}/confirm:
-    patch:
-      tags: [Bookings]
-      summary: Confirm a pending booking
-      operationId: confirmBooking
-      description: >
-        Transitions the booking from PENDING to CONFIRMED and marks all
-        held seats as BOOKED. Called when the user clicks "Confirm booking"
-        on the checkout page.
-      parameters:
-        - $ref: '#/components/parameters/BookingIdPath'
-      responses:
-        '200':
-          description: Booking confirmed; seats marked BOOKED.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BookingItem'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/BookingNotFound'
-        '409':
-          $ref: '#/components/responses/BookingNotPending'
-
 components:
 
   securitySchemes:
@@ -903,21 +806,21 @@ components:
       in: path
       required: true
       schema:
-        type: string
+        type: integer
 
     ShowtimeIdPath:
       name: showtimeId
       in: path
       required: true
       schema:
-        type: string
+        type: integer
 
     BookingIdPath:
       name: bookingId
       in: path
       required: true
       schema:
-        type: string
+        type: integer
 
     PageParam:
       name: page
@@ -989,12 +892,10 @@ components:
 
     UserProfile:
       type: object
-      required: [id, name, email, role, createdAt]
+      required: [id, email, role, createdAt]
       properties:
         id:
-          type: string
-        name:
-          type: string
+          type: integer
         email:
           type: string
           format: email
@@ -1003,12 +904,16 @@ components:
         createdAt:
           type: string
           format: date-time
+        avatar:
+          type: string
+          nullable: true
+          description: Base64-encoded avatar image, or null if not set.
 
     # ── Movies ────────────────────────────────────────────────────────────────
 
-    MovieSummary:
+    MovieItem:
       type: object
-      required: [id, title, durationMinutes, genre, rating, releaseDate, basePrice, status, createdAt, updatedAt]
+      required: [id, title, durationMinutes, status]
       properties:
         id:
           type: string
@@ -1017,20 +922,13 @@ components:
         description:
           type: string
           maxLength: 2000
-          description: >
-            Included in list responses so the movie card can show a preview.
-            Always present in detail responses.
         durationMinutes:
           type: integer
         genre:
           type: string
-          examples:
-            - Sci-Fi Thriller
         rating:
           type: string
           description: Age/content rating (e.g. G, PG, PG-13, R).
-          examples:
-            - PG-13
         posterUrl:
           type: string
           format: uri
@@ -1044,29 +942,10 @@ components:
           description: Default ticket price; individual showtimes may override this.
         status:
           $ref: '#/components/schemas/MovieStatus'
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    MovieDetail:
-      description: >
-        Full movie record. Extends MovieSummary with description guaranteed present.
-        Returned by GET /movies/{movieId}, GET /admin/movies, and mutation responses.
-      allOf:
-        - $ref: '#/components/schemas/MovieSummary'
-        - type: object
-          required: [description]
-          properties:
-            description:
-              type: string
-              maxLength: 2000
 
     MovieWriteBody:
       type: object
-      required: [title, durationMinutes, genre, rating, releaseDate, basePrice]
+      required: [title, durationMinutes, status]
       properties:
         title:
           type: string
@@ -1079,19 +958,21 @@ components:
           type: integer
           minimum: 1
           maximum: 600
+        posterUrl:
+          type: string
+          maxLength: 1000
+        status:
+          $ref: '#/components/schemas/MovieStatus'
+          description: >
+            Use COMING_SOON for pre-release entries and ARCHIVED to retire a
+            movie from the public catalogue without deleting it.
         genre:
           type: string
-          minLength: 1
           maxLength: 100
         rating:
           type: string
-          minLength: 1
           maxLength: 20
           description: Age/content rating (e.g. PG-13, R).
-        posterUrl:
-          type: string
-          format: uri
-          maxLength: 1000
         releaseDate:
           type: string
           format: date
@@ -1099,18 +980,12 @@ components:
           type: number
           format: float
           minimum: 0
-        status:
-          $ref: '#/components/schemas/MovieStatus'
-          description: >
-            Defaults to NOW_SHOWING when omitted. Use COMING_SOON for
-            pre-release entries and ARCHIVED to retire a movie from the
-            public catalogue without deleting it.
 
     # ── Showtimes ─────────────────────────────────────────────────────────────
 
     ShowtimeItem:
       type: object
-      required: [id, movieId, roomName, startsAt, endsAt, price, capacity, remainingSeats, createdAt, updatedAt]
+      required: [id, movieId, roomName, startsAt, endsAt, price, capacity, remainingSeats]
       properties:
         id:
           type: string
@@ -1118,9 +993,7 @@ components:
           type: string
         roomName:
           type: string
-          description: Display name of the room (e.g. "Auditorium A").
-          examples:
-            - Auditorium A
+          description: Room identifier (e.g. "A", "HALL1").
         startsAt:
           type: string
           format: date-time
@@ -1128,7 +1001,7 @@ components:
         endsAt:
           type: string
           format: date-time
-          description: UTC end time (derived from movie durationMinutes).
+          description: UTC end time.
         price:
           type: number
           format: float
@@ -1139,58 +1012,53 @@ components:
         remainingSeats:
           type: integer
           description: Seats still available for booking (not HELD or BOOKED).
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    AdminShowtimeItem:
-      description: >
-        Showtime with additional fields needed by the admin scheduling panel:
-        movie title, duration, cinema/room identifiers and names, and lifecycle status.
-      allOf:
-        - $ref: '#/components/schemas/ShowtimeItem'
-        - type: object
-          required: [movieTitle, durationMinutes, cinemaId, cinemaName, roomId, status]
-          properties:
-            movieTitle:
-              type: string
-            durationMinutes:
-              type: integer
-              description: Runtime in minutes, copied from the movie. Used in the admin schedule card display.
-            cinemaId:
-              type: string
-            cinemaName:
-              type: string
-            roomId:
-              type: string
-            status:
-              $ref: '#/components/schemas/ShowtimeStatus'
 
     ShowtimeWriteBody:
       type: object
-      required: [movieId, cinemaId, roomId, startsAt, price]
-      description: >
-        The end time is derived server-side from movie durationMinutes.
-        The room capacity is derived from the selected room.
+      required: [movieId, room, startTime, endTime, totalSeats]
       properties:
         movieId:
+          type: integer
+        room:
           type: string
-        cinemaId:
-          type: string
-        roomId:
-          type: string
-        startsAt:
+          minLength: 1
+          maxLength: 100
+          pattern: '^[A-Z0-9][A-Z0-9_-]*$'
+          description: Room identifier (e.g. "A", "HALL1").
+        startTime:
           type: string
           format: date-time
           description: UTC start time (e.g. 2026-04-05T10:00:00Z).
-        price:
-          type: number
-          format: float
-          minimum: 0
-          description: Ticket price for this showtime.
+        endTime:
+          type: string
+          format: date-time
+          description: UTC end time (e.g. 2026-04-05T12:00:00Z).
+        totalSeats:
+          type: integer
+          minimum: 1
+          maximum: 500
+          description: Total number of seats in the room.
+
+    ShowtimeUpdateBody:
+      type: object
+      required: [room, startTime, endTime, totalSeats]
+      description: Same as ShowtimeWriteBody but without movieId (movie cannot be changed after creation).
+      properties:
+        room:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: '^[A-Z0-9][A-Z0-9_-]*$'
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        totalSeats:
+          type: integer
+          minimum: 1
+          maximum: 500
 
     # ── Seats ─────────────────────────────────────────────────────────────────
 
@@ -1209,47 +1077,12 @@ components:
           type: string
           description: Single uppercase letter identifying the row (A–Z).
           pattern: '^[A-Z]$'
-          examples:
-            - A
         number:
           type: integer
           minimum: 1
           description: Seat position within the row.
         status:
           $ref: '#/components/schemas/SeatStatus'
-
-    # ── Cinemas ───────────────────────────────────────────────────────────────
-
-    CinemaRoom:
-      type: object
-      required: [id, cinemaId, name, capacity]
-      properties:
-        id:
-          type: string
-        cinemaId:
-          type: string
-          description: ID of the parent cinema. Useful for room option filtering in the showtime form.
-        name:
-          type: string
-          description: Display name of the room (e.g. "Auditorium A").
-        capacity:
-          type: integer
-          minimum: 1
-          description: Total number of seats in the room.
-
-    CinemaLocation:
-      type: object
-      required: [id, name, rooms]
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-          description: Cinema name (e.g. "CGV Vincom").
-        rooms:
-          type: array
-          items:
-            $ref: '#/components/schemas/CinemaRoom'
 
     # ── Bookings ──────────────────────────────────────────────────────────────
 
@@ -1290,54 +1123,36 @@ components:
           nullable: true
           description: Set when status transitions to CONFIRMED.
 
-    BookingWithContext:
+    BookingSummary:
+      type: object
+      required: [bookingId, showtimeId, seatNumbers, status, createdAt, updatedAt]
       description: >
-        Booking enriched with the showtime and movie it belongs to.
-        Used by GET /users/me/bookings so the ticket history page can
-        render without additional fetches.
-      allOf:
-        - $ref: '#/components/schemas/BookingItem'
-        - type: object
-          required: [showtime, movie]
-          properties:
-            showtime:
-              type: object
-              required: [id, startsAt, endsAt, roomName]
-              properties:
-                id:
-                  type: string
-                startsAt:
-                  type: string
-                  format: date-time
-                endsAt:
-                  type: string
-                  format: date-time
-                roomName:
-                  type: string
-            movie:
-              type: object
-              required: [id, title]
-              properties:
-                id:
-                  type: string
-                title:
-                  type: string
+        Lightweight booking record returned by listing endpoints
+        (GET /bookings and GET /users/me/bookings).
+      properties:
+        bookingId:
+          type: integer
+        showtimeId:
+          type: integer
+        seatNumbers:
+          type: array
+          items:
+            type: string
+          description: Seat labels (e.g. ["A1", "B3"]).
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     # ── Enums ─────────────────────────────────────────────────────────────────
 
     UserRole:
       type: string
       enum: [USER, ADMIN]
-
-    ShowtimeStatus:
-      type: string
-      enum: [SCHEDULED, ONGOING, COMPLETED, CANCELLED]
-      description: >
-        Lifecycle state of a showtime.
-        SCHEDULED: not yet started.
-        ONGOING: currently in progress.
-        COMPLETED: screening has ended.
-        CANCELLED: showtime was cancelled; seats are released.
 
     MovieStatus:
       type: string
@@ -1516,15 +1331,3 @@ components:
               value:
                 code: BOOKING_ALREADY_CANCELLED
                 detail: This booking has already been cancelled.
-
-    BookingNotPending:
-      description: Booking cannot be confirmed because it is not in PENDING status
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetail'
-          examples:
-            default:
-              value:
-                code: BOOKING_NOT_PENDING
-                detail: Only PENDING bookings can be confirmed.
