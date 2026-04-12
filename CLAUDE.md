@@ -3,7 +3,8 @@
 ## Project overview
 
 Quarkus 3.34.2 modular monolith for a movie booking system. Java 21, Gradle 9.3, PostgreSQL 16, Liquibase.
-See `movie-booking-api-spec.yaml` for the full API contract and `docs/decisions.md` for design rationale.
+See `docs/movie-booking-api-spec.yaml` for the full API contract and `docs/decisions.md` for design rationale.
+Postman collection and environments are in `docs/movie-booking.postman_collection.json` and `docs/movie-booking.postman_environment.*.json`.
 
 ---
 
